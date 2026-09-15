@@ -56,7 +56,6 @@ button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit
 ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,rgba(212,175,55,.5),rgba(212,175,55,.18));border-radius:20px;border:2px solid transparent;background-clip:padding-box}
 ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,rgba(212,175,55,.85),rgba(212,175,55,.4));background-clip:padding-box}
 .no-anim *{animation:none!important;transition:none!important}
-/* ---- حالت‌های دیتابیس: ریز و محو شونده ---- */
 .note.db-note{font-size:10.5px;opacity:.68;max-height:130px;overflow:hidden;line-height:1.8;
 transition:opacity .9s ease,max-height .9s ease,padding .9s ease,margin .9s ease,border-width .9s ease}
 .note.db-note.gone{opacity:0;max-height:0;padding-top:0;padding-bottom:0;margin-top:0!important;margin-bottom:0;border-width:0}
@@ -135,7 +134,6 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .tab:hover{color:var(--gold)}
 .tab.on{background:var(--ggrad);color:#241b03;border-color:transparent;box-shadow:0 4px 14px rgba(212,175,55,.28)}
 .lbody{flex:1;overflow-y:auto;overflow-x:hidden}
-/* stories */
 .story-bar{display:flex;gap:15px;align-items:center;padding:13px 14px 11px;border-bottom:1px solid var(--line2);background:var(--bg2);overflow-x:auto;scrollbar-width:none}
 .story-bar::-webkit-scrollbar{display:none}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;flex:0 0 auto;transition:var(--t)}
@@ -177,7 +175,6 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .story-drop:hover{background:var(--hov);border-color:var(--gold)}
 #stPrev img{width:100%;max-height:230px;object-fit:cover;border-radius:14px;margin-top:10px}
 .st-text{font-size:21px;text-align:center;line-height:2}
-/* chat item */
 .item{display:flex;gap:12px;padding:11px 14px;cursor:pointer;position:relative;transition:background .2s;align-items:center;animation:fadeUp .35s both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 .item:hover{background:var(--hov)}
@@ -203,7 +200,6 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 @keyframes float{50%{transform:translateY(-12px)}}
 .empty h3{margin:0;color:var(--txt);font-size:20px}
 .empty p{margin:0;font-size:13.5px;max-width:300px}
-/* ============ CHAT ============ */
 .chead{display:flex;align-items:center;gap:12px;padding:9px 14px;background:var(--glass);backdrop-filter:blur(16px);border-bottom:1px solid var(--line2);z-index:6;min-height:64px}
 .chead .info{flex:1;min-width:0;cursor:pointer}
 .chead .info h3{margin:0;font-size:16px;font-weight:800;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -297,7 +293,6 @@ repeating-linear-gradient(90deg,transparent 0 23px,rgba(212,175,55,.14) 23px 24p
 .contact-card{display:flex;align-items:center;gap:11px;cursor:pointer;padding:4px}
 .video-el{border-radius:12px;overflow:hidden;margin:-3px -6px 4px;max-height:380px;background:#000}
 .video-el video{width:100%;max-height:380px;display:block}
-/* composer */
 .composer{padding:10px 14px 14px;background:var(--glass);backdrop-filter:blur(18px);border-top:1px solid var(--line2);z-index:6}
 .cwrap{max-width:900px;margin:0 auto}
 .cbanner{display:flex;align-items:center;gap:10px;padding:7px 11px;margin-bottom:8px;border-radius:12px;background:var(--panel);border:1px solid var(--line2);border-inline-start:3px solid var(--gold);animation:fadeUp .25s both}
@@ -326,7 +321,6 @@ background:radial-gradient(700px 420px at 78% 12%,rgba(212,175,55,.13),transpare
 .chip:hover{color:var(--gold);transform:translateY(-3px);border-color:var(--gold)}
 .hero:before{content:'';position:absolute;inset:0;opacity:var(--wp);
 background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cpath d='M75 8 L138 44 L138 116 L75 152 L12 116 L12 44 Z' fill='none' stroke='%23d4af37' stroke-opacity='.07'/%3E%3C/svg%3E")}
-/* ============ INFO PANEL ============ */
 .pane-info{position:absolute;inset-block:0;left:0;width:min(400px,92%);background:var(--bg2);border-right:1px solid var(--line);box-shadow:var(--sh);z-index:40;transform:translateX(-103%);visibility:hidden;transition:transform .38s cubic-bezier(.3,.9,.3,1),visibility .38s;overflow:hidden}
 .pane-info.open{transform:none;visibility:visible}
 .ihead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line2)}
@@ -365,7 +359,6 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:6px}
 .mgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;transition:var(--t)}
 .mgrid img:hover{transform:scale(1.04);filter:brightness(1.1)}
-/* ============ MODALS / MENUS ============ */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(6px);z-index:200;display:grid;place-items:center;padding:18px;animation:fade .25s both}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .modal{width:min(480px,100%);max-height:88vh;display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--line);border-radius:24px;box-shadow:var(--sh);overflow:hidden;animation:mup .35s cubic-bezier(.2,.9,.3,1.1) both}
@@ -405,7 +398,6 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .lb-bar{position:absolute;top:14px;inset-inline:14px;display:flex;gap:8px;justify-content:flex-end}
 .lb-bar button{width:42px;height:42px;border-radius:13px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;display:grid;place-items:center;transition:var(--t)}
 .lb-bar button:hover{background:var(--gold);color:#231a03}
-/* emoji picker */
 .picker{position:absolute;bottom:calc(100% + 10px);inset-inline-start:0;width:min(360px,92vw);height:390px;background:var(--bg3);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh);display:flex;flex-direction:column;overflow:hidden;z-index:60;animation:mup .25s both}
 .picker .ph{padding:9px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px}
 .picker .ph .search-box{flex:1;min-width:0}
@@ -431,7 +423,6 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .opt-pill{padding:8px 15px;border-radius:20px;background:var(--bg3);border:1px solid var(--line2);cursor:pointer;font-size:13px;font-weight:600;transition:var(--t)}
 .opt-pill.on{background:var(--ggrad);color:#241b03;border-color:transparent}
 .note{font-size:12px;color:var(--txt2);background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;line-height:1.8}
-/* ============ MOBILE ============ */
 .mob-nav{display:none}
 @media(max-width:1024px){
 #app{grid-template-columns:1fr;grid-template-rows:1fr 62px}
@@ -576,7 +567,6 @@ if(d<6048e5)return 'آخرین بازدید '+fa(Math.floor(d/864e5))+' روز �
 return 'آخرین بازدید '+new Date(t).toLocaleDateString('fa-IR')}
 function fSize(b){if(!b)return '';if(b<1024)return fa(b)+' ب';if(b<1048576)return fa((b/1024).toFixed(1).replace('.','٫'))+' ک‌ب';return fa((b/1048576).toFixed(1).replace('.','٫'))+' م‌ب'}
 function validUn(u){return /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(u)}
-/* ---------- Icons ---------- */
 const I=(p,sw=1.8)=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICO={
 chat:I('<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4Z"/>'),
@@ -639,7 +629,6 @@ story:I('<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.4"/><path
 };
 const LOGO=`<svg viewBox="0 0 64 64" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbeec0"/><stop offset=".45" stop-color="#d4af37"/><stop offset="1" stop-color="#9d7a1d"/></linearGradient></defs><path d="M32 3 L58 18 V46 L32 61 L6 46 V18 Z" stroke="url(#lg)" stroke-width="2.4" fill="rgba(212,175,55,.08)"/><path d="M18 40 L46 22 L36 46 L31 35 Z" fill="url(#lg)"/></svg>`;
 const EMPTY_SVG=`<svg viewBox="0 0 200 160" fill="none"><defs><linearGradient id="eg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbeec0"/><stop offset="1" stop-color="#b8912a"/></linearGradient></defs><rect x="24" y="42" width="112" height="72" rx="20" stroke="url(#eg)" stroke-width="2.4"/><path d="M44 114 L44 132 L62 114" stroke="url(#eg)" stroke-width="2.4" stroke-linejoin="round"/><rect x="64" y="24" width="112" height="72" rx="20" stroke="url(#eg)" stroke-width="2.4" opacity=".45"/><path d="M156 96 L156 114 L138 96" stroke="url(#eg)" stroke-width="2.4" opacity=".45" stroke-linejoin="round"/><circle cx="58" cy="78" r="5" fill="url(#eg)"/><circle cx="80" cy="78" r="5" fill="url(#eg)" opacity=".7"/><circle cx="102" cy="78" r="5" fill="url(#eg)" opacity=".4"/><path d="m150 20 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="url(#eg)" opacity=".8"/></svg>`;
-/* ---------- Store ---------- */
 const DB={
 data:null,
 load(){try{this.data=JSON.parse(localStorage.getItem(KEY))}catch(e){this.data=null}
@@ -659,39 +648,89 @@ const S=DB.load();
 S.stories=S.stories.filter(s=>Date.now()-s.createdAt<864e5);
 const state={section:'chats',folder:'all',chatId:null,infoOpen:false,query:'',listQuery:'',settingsPage:'main',
 replyTo:null,editId:null,selectMode:false,selected:new Set(),drafts:{},stick:true};
-/* ---------- Backend با Firebase ---------- */
+
+/* ---------- Backend با Firebase (سینک کامل) ---------- */
 const Backend={
 async searchUsers(q){
 const n=norm(q);
 const snap=await db.ref('users').orderByChild('username').startAt(n).endAt(n+'\uf8ff').once('value');
 const users=[];
-snap.forEach(c=>{const u=c.val();if(u.id!==S.me)users.push(u)});
+snap.forEach(c=>{const u=c.val();if(u&&u.id!==S.me){users.push(u);if(!S.users[u.id])S.users[u.id]=u}});
 const snap2=await db.ref('users').once('value');
-snap2.forEach(c=>{const u=c.val();if(u.id!==S.me&&u.name&&u.name.toLowerCase().includes(q.toLowerCase())&&!users.find(x=>x.id===u.id))users.push(u)});
+snap2.forEach(c=>{const u=c.val();if(u&&u.id!==S.me&&u.name&&u.name.toLowerCase().includes(q.toLowerCase())&&!users.find(x=>x.id===u.id)){users.push(u);if(!S.users[u.id])S.users[u.id]=u}});
+DB.save();
 return users;
 },
 async getUserByUsername(un){
 const n=norm(un);
 const snap=await db.ref('users').orderByChild('username').equalTo(n).once('value');
 let found=null;
-snap.forEach(c=>{found=c.val()});
+snap.forEach(c=>{found=c.val();if(found&&!S.users[found.id])S.users[found.id]=found});
+if(found)DB.save();
 return found;
 },
 async checkUsernameAvailable(un,myId){
 const n=norm(un);
 const snap=await db.ref('users').orderByChild('username').equalTo(n).once('value');
 let exists=false;
-snap.forEach(c=>{const u=c.val();if(u.id!==myId)exists=true});
+snap.forEach(c=>{const u=c.val();if(u&&u.id!==myId)exists=true});
 return !exists;
 },
-async sendMessage(chatId,msg){return msg},
-async markRead(chatId){},
-async setTyping(chatId){},
-async publishStory(st){return st},
-async subscribe(){}
+async saveUser(u){await db.ref('users/'+u.id).set(u)},
+async updateUser(id,updates){await db.ref('users/'+id).update(updates)},
+async deleteUser(id){await db.ref('users/'+id).remove()},
+async sendMessage(chatId,msg){
+await db.ref('chats/'+chatId+'/messages/'+msg.id).set(msg);
+return msg;
+},
+async saveChat(c){await db.ref('chats/'+c.id).set(c)},
+async publishStory(st){await db.ref('stories/'+st.id).set(st);return st}
 };
-/* ---------- همگام‌سازی زنده دیتابیس ---------- */
+
+/* ---------- همگام‌سازی زنده Firebase ---------- */
 let __snap='';
+function subscribeToRealtime(){
+// سینک کاربران
+db.ref('users').on('value',snap=>{
+let changed=false;
+snap.forEach(c=>{
+const u=c.val();
+if(u&&u.id){
+const existing=S.users[u.id];
+if(!existing||existing.lastSeen!==u.lastSeen||existing.online!==u.online||existing.name!==u.name||existing.avatar?.src!==u.avatar?.src){
+S.users[u.id]=u;
+changed=true;
+}
+}
+});
+if(changed){DB.save();renderList();if(state.chatId)renderChat()}
+});
+
+// سینک چت‌های کاربر فعلی
+if(S.me){
+db.ref('chats').on('child_added',snap=>{
+const c=snap.val();
+if(!c)return;
+// فقط چت‌هایی که کاربر فعلی عضوش هست
+const isMine=c.type==='saved'&&c.id==='saved_'+S.me;
+const isPrivate=c.type==='private'&&(c.peerId===S.me||(c.members&&c.members[S.me]));
+const isGroupOrChannel=(c.type==='group'||c.type==='channel')&&c.members&&c.members[S.me];
+if(isMine||isPrivate||isGroupOrChannel){
+if(!S.chats[c.id]){S.chats[c.id]=c;DB.save();renderList();renderChat()}
+}
+});
+
+db.ref('chats').on('child_changed',snap=>{
+const c=snap.val();
+if(!c||!S.chats[c.id])return;
+S.chats[c.id]=c;
+DB.save();
+renderList();
+if(state.chatId===c.id){renderChat()}
+});
+}
+}
+
 function liveSync(){
 const raw=localStorage.getItem(KEY)||'';
 if(raw===__snap)return;
@@ -718,7 +757,6 @@ renderAll();
 if(stick)stickBottom(true);
 }else{renderRail();renderList()}
 }
-/* ---------- محو شدن خودکار حالت‌های دیتابیس بعد از ۱۰ ثانیه ---------- */
 function armDbNotes(root){
 $$('.db-note',root||document).forEach(n=>{
 if(n.dataset.armed)return;
@@ -726,7 +764,6 @@ n.dataset.armed='1';
 setTimeout(()=>n.classList.add('gone'),10000);
 });
 }
-/* ---------- Avatars ---------- */
 const AVCOLS=[['#f7e8ab','#b8912a'],['#ffd9a0','#c07a2a'],['#ffe3f0','#c05a8a'],['#c9f0ff','#3a86b8'],['#d6ffd9','#3aa35a'],['#e6dcff','#7a5ac0'],['#ffd6d6','#c04a4a'],['#fff3c4','#a89018']];
 function avStyle(a){if(a&&a.src)return'';const c=(a&&a.col)||AVCOLS[0];return `background:linear-gradient(140deg,${c[0]},${c[1]})`}
 function avatarHTML(av,size,name,online){
@@ -737,10 +774,17 @@ return `<div class="avatar" ${s}>${av&&av.src?`<img src="${av.src}" alt="">`:`<s
 function chatAvatar(c){return c.type==='private'?userAvatar(peerOf(c)):c.type==='saved'?null:c.avatar}
 function userAvatar(u){return u?u.avatar:null}
 function savedAv(){return{col:['#f7e8ab','#8c6a14'],src:null}}
-/* ---------- Helpers ---------- */
 function chatById(id){return S.chats[id]}
 function peerOf(c){return c&&c.type==='private'?S.users[c.peerId]:null}
-function chatName(c){if(!c)return'';if(c.type==='saved')return 'پیام‌های ذخیره‌شده';if(c.type==='private'){const p=peerOf(c);return p?p.name:'کاربر حذف‌شده'}return c.title}
+function chatName(c){
+if(!c)return'';
+if(c.type==='saved')return 'پیام‌های ذخیره‌شده';
+if(c.type==='private'){
+const p=peerOf(c);
+return p?p.name:'کاربر ناشناس';
+}
+return c.title;
+}
 function chatSub(c){
 if(c.type==='saved')return 'یادداشت‌های شخصی شما';
 if(c.type==='private'){const p=peerOf(c);if(!p)return '';return p.online?'آنلاین':relTime(p.lastSeen)}
@@ -776,9 +820,6 @@ return{t:who+mine+t,s:isMine(m)&&m.type!=='system'};
 }
 function unreadCount(){return Object.values(S.chats).reduce((a,c)=>a+(c.unread||0),0)}
 function activeStories(uidv){return S.stories.filter(s=>s.userId===uidv&&Date.now()-s.createdAt<864e5).sort((a,b)=>a.createdAt-b.createdAt)}
-/* =========================================================
-AUTH
-========================================================= */
 let authAv={type:'color',col:AVCOLS[0],src:null};
 let authMode='signup';
 function setAuthMode(m){
@@ -806,10 +847,14 @@ const available=await Backend.checkUsernameAvailable(un,null);
 if(!available)return showErr('این یوزرنیم قبلاً گرفته شده');
 const id=uid('u');
 const user={id,name,username:un,pass,bio:'',avatar:{col:authAv.col,src:authAv.src},createdAt:Date.now(),lastSeen:Date.now(),online:true,contact:false,blocked:false};
-S.users[id]=user;
-await db.ref('users/'+id).set(user);
-S.me=id;S.chats['saved_'+id]={id:'saved_'+id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
-DB.save();enterApp();toast('به Nexo خوش آمدی، '+name+' 👋');
+S.users[id]=user;S.me=id;
+S.chats['saved_'+id]={id:'saved_'+id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
+await Backend.saveUser(user);
+await Backend.saveChat(S.chats['saved_'+id]);
+DB.save();
+subscribeToRealtime();
+enterApp();
+toast('به Nexo خوش آمدی، '+name+' 👋');
 }
 async function login(){
 const un=norm($('#lgUser').value),pass=$('#lgPass').value;
@@ -821,14 +866,17 @@ if(!u)return showErr('کاربری با این یوزرنیم پیدا نشد');
 if(!u.pass)return showErr('این حساب رمز عبور ندارد');
 if(u.pass!==pass)return showErr('رمز عبور نادرست است');
 S.me=u.id;S.users[u.id]=u;u.online=true;u.lastSeen=Date.now();
-await db.ref('users/'+u.id).update({online:true,lastSeen:Date.now()});
-if(!S.chats['saved_'+u.id])S.chats['saved_'+u.id]={id:'saved_'+u.id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
-DB.save();enterApp();toast('خوش برگشتی، '+u.name+' 👋');
+await Backend.updateUser(u.id,{online:true,lastSeen:Date.now()});
+if(!S.chats['saved_'+u.id]){
+S.chats['saved_'+u.id]={id:'saved_'+u.id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
+await Backend.saveChat(S.chats['saved_'+u.id]);
+}
+DB.save();
+subscribeToRealtime();
+enterApp();
+toast('خوش برگشتی، '+u.name+' 👋');
 }
 function showErr(t){const e=$('#authErr');e.textContent=t;e.classList.add('show')}
-/* =========================================================
-RENDER
-========================================================= */
 function enterApp(){
 $('#auth').classList.add('hidden');$('#app').classList.remove('hidden');
 applyTheme();renderAll();
@@ -839,7 +887,6 @@ document.documentElement.style.fontSize=S.settings.fontSize+'px';
 document.body.classList.toggle('no-anim',!S.settings.animations);
 }
 function renderAll(){renderRail();renderList();renderChat();renderInfo()}
-/* ---------- Rail ---------- */
 function renderRail(){
 const u=me();const un=unreadCount();
 const items=[['chats',ICO.chat,'چت‌ها',un],['contacts',ICO.users,'مخاطبین',0],['search',ICO.search,'جستجو',0],['settings',ICO.cog,'تنظیمات',0]];
@@ -853,7 +900,6 @@ $('#rail').innerHTML=html;
 $('#mobNav').innerHTML=items.map(([k,ic,lb,b])=>`<button class="rbtn ${state.section===k?'on':''}" data-act="nav" data-k="${k}">${ic}${b?`<i class="badge">${fa(b>99?'99+':b)}</i>`:''}</button>`).join('')+
 `<button class="rbtn" data-act="new-menu">${ICO.plus}</button>`;
 }
-/* ---------- List pane ---------- */
 const FOLDERS=()=>[{id:'all',n:'همه'},{id:'private',n:'خصوصی'},{id:'group',n:'گروه‌ها'},{id:'channel',n:'کانال‌ها'},{id:'unread',n:'خوانده‌نشده'},...S.folders];
 function renderList(){
 const h=$('#lhead'),b=$('#lbody');
@@ -998,7 +1044,7 @@ b.innerHTML=`<div class="item" data-act="nav" data-k="profile">${avatarHTML(u.av
 `<div class="irow" data-act="settings-go" data-k="${k}"><span class="ic">${ic}</span><div class="rc"><div class="rl">${t}</div><div class="rs">${s}</div></div><span style="color:var(--txt3)">${ICO.backR}</span></div>`).join('')+
 `<div class="sec-title">حساب</div>
 <div class="irow" data-act="switch-account"><span class="ic">${ICO.out}</span><div class="rc"><div class="rl">خروج از حساب</div><div class="rs">بازگشت به صفحه ورود</div></div></div>
-<div class="irow danger" data-act="delete-account"><span class="ic">${ICO.trash}</span><div class="rc"><div class="rl">حذف حساب کاربری</div><div class="rs">پاک شدن همه داده‌های محلی</div></div></div>`;
+<div class="irow danger" data-act="delete-account"><span class="ic">${ICO.trash}</span><div class="rc"><div class="rl">حذف حساب کاربری</div><div class="rs">پاک شدن همه داده‌ها و آزاد شدن یوزرنیم</div></div></div>`;
 return;
 }
 const p=SETTINGS_PAGES[state.settingsPage];
@@ -1081,7 +1127,6 @@ ${[['گفتگو',fa(Object.keys(S.chats).length)],['مخاطب',fa(Object.values
 <div class="sec-title">لینک اشتراک پروفایل</div>
 <div style="padding:0 14px 24px"><div class="note" style="direction:ltr;text-align:center;font-weight:700">nexo.app/@${esc(u.username)}</div></div>`;
 }
-/* ---------- Chat pane ---------- */
 function renderChat(){
 const root=$('#chatRoot');
 const c=state.chatId?chatById(state.chatId):null;
@@ -1171,7 +1216,6 @@ else box.innerHTML='';
 }
 function findMsg(id){for(const c of Object.values(S.chats)){const m=c.messages.find(x=>x.id===id);if(m)return m}return null}
 function msgChat(id){for(const c of Object.values(S.chats)){if(c.messages.some(x=>x.id===id))return c}return null}
-/* ---------- Messages ---------- */
 function renderMessages(full){
 const c=chatById(state.chatId);if(!c)return;
 const box=$('#msgs');if(!box)return;
@@ -1264,7 +1308,6 @@ if(instant)b.style.scrollBehavior='auto';
 b.scrollTop=b.scrollHeight;
 if(instant)setTimeout(()=>b.style.scrollBehavior='smooth',40);
 }
-/* ---------- Info panel ---------- */
 let infoTab='media';
 function renderInfo(){
 const p=$('#infoPane');const c=state.chatId?chatById(state.chatId):null;
@@ -1339,9 +1382,6 @@ const defs=[['send','ارسال پیام'],['media','ارسال رسانه'],['p
 return `<div class="sec-title">دسترسی‌های اعضا</div>`+defs.map(([k,l])=>`<div class="perm"><div class="pc"><div class="pn">${l}</div></div>
 <button class="switch ${p[k]===false?'':'on'}" data-act="perm" data-k="${k}"></button></div>`).join('');
 }
-/* =========================================================
-ACTIONS
-========================================================= */
 function openChat(id){
 const c=chatById(id);if(!c)return;
 state.chatId=id;state.replyTo=null;state.editId=null;state.selectMode=false;state.selected.clear();state.infoOpen=false;
@@ -1349,10 +1389,15 @@ c.unread=0;c.messages.forEach(m=>{if(!isMine(m)&&!(m.readBy||[]).includes(S.me))
 DB.save();$('#app').classList.add('chat-open');renderAll();
 }
 function closeChat(){state.chatId=null;$('#app').classList.remove('chat-open');state.infoOpen=false;renderAll()}
-function startPrivateChat(userId){
+async function startPrivateChat(userId){
 let c=Object.values(S.chats).find(x=>x.type==='private'&&x.peerId===userId);
-if(!c){c={id:uid('c'),type:'private',peerId:userId,messages:[],unread:0,muted:false,pinned:false,archived:false,createdAt:Date.now()};S.chats[c.id]=c;DB.save()}
-S.users[userId].contact=true;DB.save();openChat(c.id);renderList();
+if(!c){
+c={id:uid('c'),type:'private',peerId:userId,messages:[],unread:0,muted:false,pinned:false,archived:false,createdAt:Date.now()};
+S.chats[c.id]=c;
+await Backend.saveChat(c);
+}
+if(S.users[userId])S.users[userId].contact=true;
+DB.save();openChat(c.id);renderList();
 }
 function sendText(){
 const ta=$('#cin');if(!ta)return;const txt=ta.value.trim();if(!txt)return;
@@ -1363,11 +1408,11 @@ pushMsg(c,{type:onlyEmoji?'sticker':'text',text:txt});
 ta.value='';ta.style.height='auto';$('#sendBtn').innerHTML=ICO.mic;$('#sendBtn').dataset.act='start-rec';
 state.replyTo=null;renderComposerBanner();renderList();
 }
-function pushMsg(c,payload){
+async function pushMsg(c,payload){
 const m=Object.assign({id:uid('m'),chatId:c.id,senderId:S.me,createdAt:Date.now(),status:'sent',readBy:[S.me],reactions:{}},payload);
 if(state.replyTo){m.replyTo=state.replyTo;state.replyTo=null}
 c.messages.push(m);if(c.type==='channel')m.views=1;
-DB.save();Backend.sendMessage(c.id,m);
+DB.save();await Backend.sendMessage(c.id,m);
 if(state.chatId===c.id){appendMessage(m,true);renderComposerBanner()}
 return m;
 }
@@ -1380,7 +1425,6 @@ if(S.settings.sounds)beep();
 if(S.settings.desktop&&Notification&&Notification.permission==='granted')new Notification(chatName(c),{body:(m.text||'پیام جدید').slice(0,90)});
 }
 function beep(){try{const ac=new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.value=.05;o.start();o.frequency.exponentialRampToValueAtTime(1320,ac.currentTime+.09);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.25);o.stop(ac.currentTime+.26)}catch(e){}}
-/* ---------- Media helpers ---------- */
 function fileToDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
 function compressImage(file,max=1400,q=.75){
 return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
@@ -1399,7 +1443,6 @@ if(f.size>4*1024*1024){toast('حجم فایل برای ذخیره محلی زی�
 const src=await fileToDataURL(f);
 pushMsg(c,{type:f.type.startsWith('video/')?'video':'file',media:{src,name:f.name,size:f.size,mime:f.type}});renderList();
 }
-/* voice */
 let rec=null,recChunks=[],recStart=0,recTimer=null;
 async function startRec(){
 const c=chatById(state.chatId);if(!c)return;
@@ -1418,7 +1461,6 @@ const r=new FileReader();r.onload=()=>{pushMsg(c,{type:'voice',media:{src:r.resu
 }
 function stopRec(cancel){clearInterval(recTimer);if(rec&&rec.state==='recording'){if(cancel){rec.onstop=null;rec.stream.getTracks().forEach(t=>t.stop());rec.stop()}else rec.stop()}
 rec=null;const c=chatById(state.chatId);if(c){const bar=$('.cbar');if(bar&&bar.dataset.old){bar.innerHTML=bar.dataset.old;delete bar.dataset.old;bindComposer()}}}
-/* ---------- Modals ---------- */
 let openModals=[];
 function modal({title,body,foot,wide,onMount,icon}){
 const ov=document.createElement('div');ov.className='overlay';
@@ -1443,7 +1485,6 @@ $('#okBtn',ov).onclick=()=>{const vals={};for(const f of fields){vals[f.k]=f.typ
 if(onOk(vals,ov)!==false)closeModal(ov)};
 setTimeout(()=>{const fi=$('input,textarea',ov);fi&&fi.focus()},120)}});
 }
-/* ---------- New: private / group / channel ---------- */
 function newPrivateModal(){
 modal({title:'گفتگوی جدید',icon:ICO.search,
 body:`<div class="search-box" style="margin-bottom:14px">${ICO.search}<input id="npQ" placeholder="یوزرنیم را با @ یا بدون @ وارد کنید…" style="direction:ltr"></div>
@@ -1528,7 +1569,6 @@ if(!c)return toast('لینک معتبری پیدا نشد','err'),false;
 if(!c.members[S.me]){c.members[S.me]={role:'member',joined:Date.now()};pushSystem(c.id,me().name+' به گفتگو پیوست');DB.save()}
 openChat(c.id);renderAll();toast('عضو شدید ✅')},'پیوستن');
 }
-/* ---------- Profile / edit ---------- */
 function editMeModal(){
 const u=me();
 promptBox('ویرایش پروفایل',[
@@ -1536,13 +1576,14 @@ promptBox('ویرایش پروفایل',[
 {k:'username',label:'یوزرنیم',v:u.username,dir:'ltr',max:32,hint:'۵ تا ۳۲ حرف انگلیسی، عدد و _'},
 {k:'bio',label:'درباره من (Bio)',v:u.bio,type:'textarea',max:140},
 {k:'av',label:'تصویر پروفایل',type:'file',v:u.name,av:u.avatar}
-],v=>{
+],async v=>{
 if(v.name.length<2)return toast('نام کوتاه است','err'),false;
 const un=norm(v.username);
 if(!validUn(un))return toast('یوزرنیم نامعتبر است','err'),false;
-if(Object.values(S.users).some(x=>x.id!==S.me&&norm(x.username)===un))return toast('یوزرنیم تکراری است','err'),false;
+const available=await Backend.checkUsernameAvailable(un,u.id);
+if(!available)return toast('یوزرنیم تکراری است','err'),false;
 u.name=v.name;u.username=un;u.bio=v.bio;if(v.av)u.avatar={src:v.av};
-DB.save();renderAll();toast('پروفایل به‌روزرسانی شد ✅')},'ذخیره');
+DB.save();await Backend.saveUser(u);renderAll();toast('پروفایل به‌روزرسانی شد ✅')},'ذخیره');
 }
 function editChatModal(id){
 const c=chatById(id);if(!c)return;
@@ -1572,7 +1613,6 @@ const arr=users.filter(u=>u.id!==S.me&&!c.members[u.id]);
 l.innerHTML=arr.length?arr.map(u=>`<div class="mrow" data-act="add-member-do" data-id="${u.id}" data-cid="${c.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span style="color:var(--gold)">${ICO.plus}</span></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px;font-size:13px">کاربری برای افزودن پیدا نشد.</p>`};
 q.oninput=run;run();q.focus()}});
 }
-/* ---------- Forward / poll / viewer ---------- */
 function forwardModal(ids){
 modal({title:'ارسال به…',icon:ICO.fwd,wide:true,
 body:`<div class="search-box" style="margin-bottom:12px">${ICO.search}<input id="fwQ" placeholder="جستجوی گفتگو…"></div><div id="fwList" style="max-height:340px;overflow-y:auto"></div>`,
@@ -1639,7 +1679,6 @@ setTimeout(()=>document.addEventListener('click',outsideMenu,{once:true}),10);
 let curMenu=null;
 function closeMenu(){if(curMenu){curMenu.remove();curMenu=null}}
 function outsideMenu(){closeMenu()}
-/* ---------- Chat & message menus ---------- */
 function chatMenu(id,anchor){
 const c=chatById(id);if(!c)return;const mine=isAdmin(c);
 const items=[];
@@ -1685,7 +1724,6 @@ items.push(`<div class="msep"></div><button class="mi danger" data-act="kick" da
 if(uidv===S.me)items.push(`<div class="msep"></div><button class="mi danger" data-act="leave-chat" data-id="${c.id}">${ICO.out} خروج از گفتگو</button>`);
 menuAt(anchor,items.join(''));
 }
-/* ---------- Toasts ---------- */
 function toast(text,kind){
 const t=document.createElement('div');t.className='toast '+(kind||'');
 t.innerHTML=`${kind==='err'?ICO.info:ICO.sparkle}<span>${esc(text)}</span>`;
@@ -1696,16 +1734,15 @@ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeT
 else fb();
 function fb(){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('کپی شد 📋')}catch(e){toast('کپی نشد','err')}a.remove()}
 }
-/* ---------- Emoji picker ---------- */
 const EMO={
-'صورتک':['😀','😃','😄','😁','','😅','','😂','🙂','','😉','😊','😇','🥰','😍','','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','','🤗','🤭','🤫','','🤨','','😑','😶','😏','😒','','😬','','😌','😔','😪','🤤','','😷','','','🤢','','','🥶','','😵','🤯','🤠','','😎','','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡',''],
-'دست و قلب':['👋','','🖐','✋','🖖','','🤌','','✌️','🤞','','🤘','🤙','','👉','👆','','','☝️','👍','','✊','👊','','🤜','👏','🙌','👐','🤲','','💪','','❤️','','💛','','💙','💜','🖤','🤍','','💔','️','💕','💞','💓','💗','💖','💘','💝','💯','💢','💥','💫','💦','💨','🕳','💤'],
-'حیوانات و طبیعت':['🐶','🐱','','🐹','🐰','🦊','','','🐨','🐯','🦁','','🐷','🐸','🐵','','🙉','','','🐔','🐧','🐦','🐤','','','🦆','🦅','🦉','🦇','🐺','','','🦄','🐝','🐛','','🐌','🐞','','🦟','🦗','','','🦂','','🐍','🦎','🦖','🦕','','🦑','🦐','🦞','🦀','🐡','','🐟','🐬','🐳','🐋','🦈','🐊','','','🦓','🦍','','🐘','🦛','','🐪','🐫','','🦘','','🐄','🐎','🐖','🐏','🐑','🦙','🐐','','','🐩','🦮','','🐓','🦃','🦚','🦜','🦢','🦩','🕊','🐇','','','🦡','🦦','🦥','🐁','','🐿','🦔','🐉','🐲','','🎄','🌲','','🌴','🌱','🌿','☘️','🍀','','','🍃','🍂','🍁','🌾','🌺','','','🥀','🌷','🌸','','🍄','🌰','🌎','🌍','','🌕','','🌗','🌘','','🌒','🌓','🌔','🌙','','⭐','','✨','','☄️','💥','🔥','','','☀️','','⛅','🌥','️','','🌧','','','🌨','️','☃️','⛄','','💧','💦','☔'],
-'غذا و نوشیدنی':['🍏','','🍐','🍊','','','🍉','🍇','🍓','','🍈','🍒','🍑','🥭','🍍','🥥','','','🍆','','','🥬','🥒','🌶','🫑','🥕','','🧅','🥔','🍠','🥐','🥯','🍞','🥖','','','🥚','🍳','🧈','🥞','🧇','','','🍗','🍖','','🍔','🍟','🍕','🫓','🥪','','','🌮','','🫔','','🥘','🫕','🥫','🍝','🍜','🍲','🍛','','🍱','🥟','','🍤','🍙','🍚','🍘','🍥','','🥮','🍢','🍡','🍧','','🍦','🥧','🧁','','🎂','🍮','🍭','🍬','','🍿','🍩','🍪','🌰','','🍯','🥛','🍼','☕','🍵','','🥤','','🍶','','🍻','','🍷','','🍸','🍹','🧉','','🥄','','🍽','','🧊'],
-'فعالیت و سفر':['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','','🥍','🏏','🪃','','⛳','','','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸','🥌','','⛷','🏂','','🏋️','🤼','','⛹️','🤺','','🏌️','🏇','🧘','','🏊','🤽','','🧗','','🚵','','🏆','','🥈','','🏅','','🎭','','🎬','','🎧','','🎹','','🎷','','🪗','','🎻','🎲','♟','🎯','🎳','🎮','🎰','🧩','🚗','🚕','🚙','🚌','🚎','','🚓','🚑','🚒','🚐','🛻','🚚','','🚜','🛵','🏍','🛺','🚲','','🚨','','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🚀','','🚁','🛶','','','🛥','🛳','⛴','','🗺','','🗽','🗼','','🏯','🏟','🎡','🎢','🎠','⛲','⛱','🏖','🏝','🏜','🌋','⛰','🏔','🗻','','⛺','','🏡','','🏚','','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','','🕋','⛩'],
-'اشیا و نماد':['⌚','','📲','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥','','🎞','','☎️','','📠','📺','📻','🎙','','🎛','','⏱','⏲','⏰','','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯','🪔','','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','','🧰','🪛','🔧','','⚒','','','🔩','️','','⛓','🧲','🔫','💣','🧨','','','🗡','⚔️','🛡','🚬','⚰️','🪦','⚱️','🏺','','📿','🧿','💈','⚗️','🔭','🔬','🕳','','🩺','💊','💉','🩸','🧬','','🧫','','🌡','','🪠','🧺','🧻','🚽','','🚿','','🛀','','🪥','🪒','🧽','🪣','🧴','🛎','🔑','🗝','','🪑','🛋','🛏','🛌','','🪆','🖼','','🛒','','🎈','','🎀','🪄','🎊','🎉','🎎','🏮','🎐','🧧','️','📩','📨','📧','','📥','📤','📦','🏷','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','','🧾','','📈','','✅','❌','❓','❗','‼️','⁉️','🔴','🟠','🟡','🟢','🔵','','⚫','⚪','🟤','🔺','','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','⬛','⬜','🔈','🔇','🔉','🔊','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
+'صورتک':['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠'],
+'دست و قلب':['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💯','💢','💥','💫','💦','💨','🕳','💤'],
+'حیوانات و طبیعت':['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🕸','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐆','🦓','🦍','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦚','🦜','🦢','🦩','🕊','🐇','🦝','🦨','🦡','🦦','🦥','🐁','🐀','🐿','🦔','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁','🍄','🌾','🌺','🌻','🌹','🥀','🌷','🌸','💐','🍄','🌰','🌎','🌍','🌏','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','✨','⚡','☄️','💥','🔥','🌪','🌈','☀️','🌤','⛅','🌥','☁️','🌧','⛈','🌩','🌨','❄️','☃️','⛄','🌬','💧','💦','☔'],
+'غذا و نوشیدنی':['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥬','🥒','🌶','🫑','🥕','🧄','🧅','🥔','🍠','🥐','🥯','🍞','🥖','🥨','🥪','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🍔','🍟','🍕','🫓','🥪','🌭','🌮','🫔','🥙','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🥛','🍼','☕','🍵','🧃','🥤','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾','🥄','🍴','🍽','🔪','🧊'],
+'فعالیت و سفر':['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸','🥌','🎿','⛷','🏂','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🪗','🎸','🎻','🎲','♟','🎯','🎳','🎮','🎰','🧩','🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍','🛺','🚲','🛴','🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🚀','🛸','🚁','🛶','⛵','🚤','🛥','🛳','⛴','🗺','🗿','🗽','🗼','🏰','🏯','🏟','🎡','🎢','🎠','⛲','⛱','🏖','🏝','🏜','🌋','⛰','🏔','🗻','🏕','⛺','🏡','🏠','🏚','🏗','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','⛩','🕋'],
+'اشیا و نماد':['⌚','📱','📲','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🎙','🎚','🎛','🧭','⏱','⏲','⏰','🕰','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯','🪔','🧯','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','🧰','🪛','🔧','🔨','⚒','🛠','⛏','🔩','⚙️','🧱','⛓','🧲','🔫','💣','🧨','🪓','🔪','🗡','⚔️','🛡','🚬','⚰️','🪦','⚱️','🏺','🔮','📿','🧿','💈','⚗️','🔭','🔬','🕳','🩹','🩺','💊','💉','🩸','🧬','🦠','🧫','🧪','🌡','🧹','🪠','🧺','🧻','🚽','🚰','🚿','🛁','🛀','🧼','🪥','🪒','🧽','🪣','🧴','🛎','🔑','🗝','🚪','🪑','🛋','🛏','🛌','🧸','🪆','🖼','🛍','🛒','🎁','🎈','🎏','🎀','🪄','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','💌','📥','📤','📦','🏷','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','✅','❌','❓','❗','‼️','⁉️','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','⬛','⬜','🔈','🔇','🔉','🔊','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
 };
-const STICKERS=['😍','🤩','🔥','💎','👑','🌹','✨','🎉','','🥇','🦁','🚀','❤️','😎','','🥹','☀️','🍀','🎁','🏆','👏','🙏','','🥰','😴','','🫶','','👻',''];
+const STICKERS=['😍','🤩','🔥','💎','👑','🌹','✨','🎉','💯','🥇','🦁','🚀','❤️','😎','🥂','🥹','☀️','🍀','🎁','🏆','👏','🙏','🫂','🥰','😴','🤝','🫶','🌙','👻','💀'];
 const RECENT_KEY='nexo.recent.emoji';
 let pickerOpen=false,pickerCat='صورتک';
 function syncEmojiBtn(){const b=$('#emojiBtn');if(b)b.classList.toggle('on',pickerOpen)}
@@ -1729,7 +1766,7 @@ const grid=$('#emGrid',slot);
 const paint=list=>{grid.innerHTML=list.map(e=>`<button class="ebtn" data-em="${e}">${e}</button>`).join('')};
 const showCat=c=>{pickerCat=c;$$('.pcat',slot).forEach(b=>b.classList.toggle('on',b.dataset.cat===c));
 grid.classList.toggle('big',c==='__sticker');
-if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','','😂']);else paint(EMO[c])};
+if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','😢','😂']);else paint(EMO[c])};
 showCat(recents.length?'__recent':cats[0]);
 $$('.pcat',slot).forEach(b=>b.onclick=()=>showCat(b.dataset.cat));
 $('#emSearch',slot).oninput=e=>{const q=e.target.value.trim();grid.classList.remove('big');
@@ -1745,9 +1782,6 @@ if(e.target.closest('.picker'))return;
 if(e.target.closest('[data-act="emoji-open"]')||e.target.closest('[data-act="att-sticker"]'))return;
 togglePicker(false);
 });
-/* =========================================================
-STORIES
-========================================================= */
 const SBGS=['linear-gradient(160deg,#1a1408,#3a2c0c 60%,#8c6a14)','linear-gradient(160deg,#0b0b10,#232338)','linear-gradient(160deg,#f7e8ab,#c99a2e)','linear-gradient(160deg,#2b0f14,#7a2434)','linear-gradient(160deg,#0e2a22,#1f6b4a)','linear-gradient(160deg,#fdfcf8,#e4cf96)'];
 function newStoryModal(){
 modal({title:'استوری جدید',icon:ICO.story,wide:true,
@@ -1807,9 +1841,6 @@ function close(){svCtl=null;ov.style.animation='fade .2s reverse both';setTimeou
 svCtl={next,prev,close};
 show();
 }
-/* =========================================================
-EVENT DISPATCH
-========================================================= */
 document.addEventListener('click',ev=>{
 const t=ev.target.closest('[data-act]');if(!t)return;
 const a=t.dataset.act;ev.stopPropagation();
@@ -1940,7 +1971,9 @@ case 'perm':{const cc16=chatById(state.chatId);const k=t.dataset.k;cc16.permissi
 cc16.permissions[k]=cc16.permissions[k]===false?true:false;DB.save();renderInfo();renderChat();break}
 case 'call':toast(t.dataset.kind==='video'?'تماس تصویری به‌زودی فعال می‌شود':'تماس صوتی به‌زودی فعال می‌شود');closeMenu();break;
 case 'switch-account':confirmBox('خروج از حساب','با خروج، پروفایل شما از این دستگاه خارج می‌شود (داده‌ها حفظ می‌شود).',()=>{S.me=null;DB.save();location.reload()},'خروج');break;
-case 'delete-account':confirmBox('حذف حساب','همه داده‌های Nexo در این مرورگر برای همیشه حذف می‌شود.',()=>{localStorage.removeItem(KEY);location.reload()},'حذف دائمی');break;
+case 'delete-account':confirmBox('حذف حساب','همه داده‌های Nexo در این مرورگر برای همیشه حذف می‌شود و یوزرنیم آزاد می‌شود تا بتوانید دوباره با آن حساب بسازید.',async()=>{
+if(S.me){try{await db.ref('users/'+S.me).remove()}catch(e){console.warn('Firebase delete failed:',e)}}
+localStorage.removeItem(KEY);location.reload()},'حذف دائمی');break;
 case 'ask-notif':if(!('Notification' in window))return toast('مرورگر شما پشتیبانی نمی‌کند','err');
 Notification.requestPermission().then(p=>{S.settings.desktop=p==='granted';DB.save();renderList();toast(p==='granted'?'اعلان دسکتاپ فعال شد ✅':'اجازه داده نشد',p!=='granted'?'err':'')});break;
 case 'show-blocked':showBlocked();break;
@@ -2050,7 +2083,6 @@ const m=curMenu;$$('[data-f]',m).forEach(b=>b.onclick=()=>{const f=S.folders.fin
 f.chats=f.chats||[];const i=f.chats.indexOf(chatId);i>=0?f.chats.splice(i,1):f.chats.push(chatId);
 DB.save();closeMenu();toast(i>=0?'از پوشه حذف شد':'به پوشه اضافه شد')});
 }
-/* ---------- user profile modal / lookup ---------- */
 function openUserProfile(id){
 const u=S.users[id];if(!u)return;closeMenu();
 const common=Object.values(S.chats).filter(c=>c.type==='group'&&c.members[id]&&c.members[S.me]);
@@ -2120,7 +2152,6 @@ const wave=$(`[data-wave="${mid}"]`);const bars=wave?$$('i',wave):[];let idx=0,t
 timer=setInterval(()=>{bars.forEach((b,i)=>b.classList.toggle('a',i<=idx));idx++;if(idx>bars.length)idx=0},Math.max(60,(m.media.dur||1)*1000/bars.length));
 audioEl.onended=()=>{clearInterval(timer);btn.innerHTML=ICO.play;bars.forEach(b=>b.classList.remove('a'));audioEl=null};
 }
-/* ---------- Context menu / long press ---------- */
 document.addEventListener('contextmenu',e=>{
 const mi=e.target.closest('[data-cid]');const mb=e.target.closest('[data-mid].mrow');
 const rect=()=>({getBoundingClientRect:()=>({left:e.clientX,top:e.clientY,right:e.clientX,bottom:e.clientY,width:0,height:0})});
@@ -2147,7 +2178,6 @@ const b=e.target.closest('.bub');if(b&&canPost(chatById(state.chatId))){state.re
 const t=e.target.closest('.btxt');
 if(t&&/^(\p{Extended_Pictographic}|\s|️){1,6}$/u.test(t.textContent.trim())){const mid=t.closest('.mrow').dataset.mid;const m=findMsg(mid);m.reactions=m.reactions||{};(m.reactions['❤️']=m.reactions['❤️']||[]).includes(S.me)?m.reactions['❤️']=m.reactions['❤️'].filter(x=>x!==S.me):m.reactions['❤️'].push(S.me);DB.save();renderMessages()}
 });
-/* ---------- Keyboard ---------- */
 document.addEventListener('keydown',e=>{
 if($('.story-view')){
 if(e.key==='Escape')svCtl&&svCtl.close();
@@ -2166,12 +2196,10 @@ if(e.key==='ArrowUp'&&!e.ctrlKey){const ta=$('#cin');if(ta&&!ta.value&&state.cha
 for(let i=c.messages.length-1;i>=0;i--){if(isMine(c.messages[i])&&c.messages[i].type==='text'){state.editId=c.messages[i].id;ta.value=c.messages[i].text;renderComposerBanner();ta.focus();e.preventDefault();break}}}}
 });
 window.addEventListener('resize',()=>{const mb=$('.mob-back');if(mb)mb.style.display=window.innerWidth<=1024?'grid':'none'});
-/* ---------- File inputs ---------- */
 $('#fileImg').addEventListener('change',e=>{if(e.target.files[0])handleImage(e.target.files[0]);e.target.value=''});
 $('#fileVid').addEventListener('change',e=>{const f=e.target.files[0];if(f)f.size>8*1024*1024?toast('ویدیو برای ذخیره محلی بزرگ است (حداکثر ۸ مگابایت)','err'):handleFile(f);e.target.value=''});
 $('#fileAny').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);e.target.value=''});
 $('#avFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);authAv={src:d.src};renderAuthAvatars()});
-/* ---------- Init ---------- */
 (function init(){
 __snap=localStorage.getItem(KEY)||'';
 armDbNotes(document);
@@ -2184,7 +2212,10 @@ $('#lgUser').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=$('#lgPa
 $('#lgPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 window.addEventListener('storage',e=>{if(e.key===KEY)liveSync()});
 setInterval(liveSync,5000);
-if(S.me&&S.users[S.me]){enterApp()}
+if(S.me&&S.users[S.me]){
+subscribeToRealtime();
+enterApp();
+}
 else{$('#auth').classList.remove('hidden');setAuthMode(Object.values(S.users).some(u=>u.pass)?'login':'signup')}
 })();
 </script>
