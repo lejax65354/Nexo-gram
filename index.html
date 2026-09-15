@@ -9,6 +9,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5.2.5/700.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5.2.5/800.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lalezar@5.2.7/400.css">
+<!-- Firebase Realtime Database SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 /* ============ TOKENS ============ */
 :root{
@@ -396,6 +399,15 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 @keyframes tout{to{opacity:0;transform:translateX(-30px)}}
 .toast .ic{color:var(--gold)}
 .toast.err .ic{color:var(--danger)}
+/* ============ DB BADGE ============ */
+.db-badge{position:fixed;bottom:18px;inset-inline-end:18px;z-index:500;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;background:var(--bg3);border:1px solid var(--line2);box-shadow:var(--sh2);font-size:12px;font-weight:700;color:var(--txt2);animation:tin .3s both}
+.db-badge i{width:9px;height:9px;border-radius:50%;background:var(--txt3);flex:0 0 auto}
+.db-badge.wait i{background:var(--gold);animation:blink 1s infinite}
+.db-badge.wait{color:var(--gold);border-color:var(--line)}
+.db-badge.conn i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.db-badge.conn{color:var(--ok);border-color:rgba(76,217,123,.35)}
+.db-badge.err i{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.db-badge.err{color:var(--danger);border-color:rgba(255,107,107,.4)}
 .lightbox{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.94);display:grid;place-items:center;animation:fade .25s both}
 .lightbox img{max-width:94vw;max-height:88vh;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.8);transition:transform .3s}
 .lb-bar{position:absolute;top:14px;inset-inline:14px;display:flex;gap:8px;justify-content:flex-end}
@@ -448,6 +460,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .lhead h2{font-size:21px}
 .sv-inner{width:100%;height:100%;border-radius:0}
 .picker{width:min(340px,94vw)}
+.db-badge{bottom:76px}
 }
 @media(max-width:1024px){ .pane-list,.pane-chat{height:calc(100vh - 62px)} }
 @media(max-width:560px){ .theme-cards{grid-template-columns:1fr} .brand h1{font-size:28px} }
@@ -511,7 +524,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>
 ورود به حساب
 </button>
-<div class="note" style="margin-top:14px;text-align:center">حساب‌ها فعلاً فقط روی همین دستگاه ذخیره می‌شوند؛ پس از اتصال پایگاه‌داده ابری، از هر دستگاهی با یوزرنیم و رمز خود وارد شوید و همه پیام‌هایتان بالا می‌آید.</div>
+<div class="note" style="margin-top:14px;text-align:center">حساب‌ها روی دیتابیس ابری Nexo ذخیره می‌شوند؛ از هر دستگاهی با یوزرنیم و رمز خود وارد شوید و همه پیام‌هایتان بالا می‌آید.</div>
 </div>
 <p style="text-align:center;margin-top:16px;font-size:12.5px;color:var(--txt3)">با ورود، قوانین و حریم خصوصی Nexo را می‌پذیرید.</p>
 </div>
@@ -532,16 +545,13 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 </div>
 <div id="toasts"></div>
 <div id="layer"></div>
+<div class="db-badge wait" id="dbBadge"><i></i><span>در حال اتصال به دیتابیس…</span></div>
 <input type="file" id="fileImg" accept="image/*" class="hidden">
 <input type="file" id="fileVid" accept="video/*" class="hidden">
 <input type="file" id="fileAny" class="hidden">
 <script>
 /* =========================================================
-NEXO — لایه داده
-همه توابع Backend فعلاً روی حافظه محلی اجرا می‌شوند.
-برای اتصال Firebase کافی است بدنه همان توابع را با
-Firestore / Realtime DB جایگزین کنید؛ هیچ جای دیگری
-نیاز به تغییر ندارد.
+NEXO — لایه داده + اتصال Firebase Realtime Database
 ========================================================= */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const KEY='nexo.db.v4';
@@ -569,6 +579,47 @@ if(d<6048e5)return 'آخرین بازدید '+fa(Math.floor(d/864e5))+' روز �
 return 'آخرین بازدید '+new Date(t).toLocaleDateString('fa-IR')}
 function fSize(b){if(!b)return '';if(b<1024)return fa(b)+' ب';if(b<1048576)return fa((b/1024).toFixed(1).replace('.','٫'))+' ک‌ب';return fa((b/1048576).toFixed(1).replace('.','٫'))+' م‌ب'}
 function validUn(u){return /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(u)}
+/* ---------- Firebase Realtime Database ---------- */
+const FB_CFG={
+apiKey:"AIzaSyD0ek7rVxedCtWUHEuCEC1PKf8Dlxou2qg",
+authDomain:"nexo-gram.firebaseapp.com",
+databaseURL:"https://nexo-gram-default-rtdb.europe-west1.firebasedatabase.app",
+projectId:"nexo-gram",
+storageBucket:"nexo-gram.firebasestorage.app",
+messagingSenderId:"321421342401",
+appId:"1:321421342401:web:45aaffe918c2499cffc640"
+};
+let RTDB=null,FB_OK=false;
+try{firebase.initializeApp(FB_CFG);RTDB=firebase.database()}catch(e){RTDB=null}
+const R=p=>RTDB.ref(p);
+function dbBadge(st,txt){const b=$('#dbBadge');if(!b)return;b.className='db-badge '+st;b.querySelector('span').textContent=txt}
+function monitorConn(){
+if(!RTDB){dbBadge('err','خطا: SDK دیتابیس بارگذاری نشد');return}
+R('.info/connected').on('value',s=>{
+if(s.val()===true){FB_OK=true;dbBadge('conn','دیتابیس متصل ✅')}
+else{FB_OK=false;dbBadge('wait','در حال اتصال به دیتابیس…')}
+});
+setTimeout(()=>{if(!FB_OK)dbBadge('err','خطا در اتصال به دیتابیس — اینترنت یا تنظیمات را بررسی کنید')},9000);
+}
+function hashPass(p){
+if(window.crypto&&crypto.subtle)return crypto.subtle.digest('SHA-256',new TextEncoder().encode(p)).then(b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''));
+let h=5381;for(let i=0;i<p.length;i++)h=((h<<5)+h+p.charCodeAt(i))|0;
+return Promise.resolve('x'+(h>>>0).toString(16));
+}
+const arrToMap=a=>{const o={};(a||[]).forEach(x=>o[x]=true);return o};
+function normalizeMsg(m){
+m.readBy=m.readBy?(Array.isArray(m.readBy)?m.readBy:Object.keys(m.readBy)):[];
+if(m.reactions){const r={};for(const e in m.reactions){const v=m.reactions[e];r[e]=Array.isArray(v)?v:Object.keys(v)}m.reactions=r}else m.reactions={};
+if(m.poll&&m.poll.opts)(m.poll.opts).forEach(o=>{o.v=o.v?(Array.isArray(o.v)?o.v:Object.keys(o.v)):[]});
+return m;
+}
+function wireMsg(m){
+const w=Object.assign({},m);
+w.readBy=arrToMap(m.readBy);
+w.reactions={};for(const e in (m.reactions||{}))w.reactions[e]=arrToMap(m.reactions[e]);
+if(m.poll)w.poll=Object.assign({},m.poll,{opts:m.poll.opts.map(o=>Object.assign({},o,{v:arrToMap(o.v)}))});
+return w;
+}
 /* ---------- Icons ---------- */
 const I=(p,sw=1.8)=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICO={
@@ -652,16 +703,105 @@ const S=DB.load();
 S.stories=S.stories.filter(s=>Date.now()-s.createdAt<864e5);
 const state={section:'chats',folder:'all',chatId:null,infoOpen:false,query:'',listQuery:'',settingsPage:'main',
 replyTo:null,editId:null,selectMode:false,selected:new Set(),drafts:{},stick:true};
-/* ---------- Backend stub (Firebase hook) ---------- */
+let syncOn=false,curMsgSub=null,prevLastMap={};
+/* ---------- Backend (Firebase Realtime) ---------- */
 const Backend={
-async searchUsers(q){const n=norm(q);return Object.values(S.users).filter(u=>u.id!==S.me&&(norm(u.username)===n||norm(u.username).startsWith(n)||u.name.toLowerCase().includes(q.toLowerCase())))},
-async getUserByUsername(un){const n=norm(un);return Object.values(S.users).find(u=>norm(u.username)===n)||null},
-async sendMessage(chatId,msg){/* TODO: push to Firestore */return msg},
+async searchUsers(q){const n=norm(q);return Object.values(S.users).filter(u=>u.id!==S.me&&!u.demo&&(norm(u.username)===n||norm(u.username).startsWith(n)||u.name.toLowerCase().includes(q.toLowerCase())))},
+async getUserByUsername(un){
+const n=norm(un);
+const local=Object.values(S.users).find(u=>norm(u.username)===n);
+if(local&&!local.demo)return local;
+if(!RTDB||!FB_OK)return local||null;
+const sn=await R('usernames/'+n).once('value');const rec=sn.val();
+if(!rec)return null;
+const us=await R('users/'+rec.uid).once('value');const u=us.val();
+if(u){u.id=rec.uid;S.users[u.id]=Object.assign(S.users[u.id]||{},u,{id:u.id});}
+return u||null;
+},
+async sendMessage(chatId,msg){
+if(!RTDB||chatId.startsWith('saved_'))return;
+if(!FB_OK){toast('اتصال به دیتابیس برقرار نیست — پیام فعلاً فقط محلی است','err');return}
+R('messages/'+chatId+'/'+msg.id).set(wireMsg(msg));
+R('chats/'+chatId).update({updatedAt:Date.now(),lastMsg:{senderId:msg.senderId,type:msg.type,text:(msg.text||'').slice(0,80),createdAt:msg.createdAt,readBy:[msg.senderId]}});
+const c=chatById(chatId);
+if(c&&c.members){for(const u in c.members){if(u!==msg.senderId)R('chats/'+chatId+'/unread/'+u).transaction(v=>(v||0)+1)}}
+},
 async markRead(chatId){},
 async setTyping(chatId){},
-async publishStory(st){/* TODO: upload to Storage + Firestore stories */return st},
+async publishStory(st){
+if(!RTDB||!FB_OK)return;
+R('stories/'+st.id).set({userId:st.userId,type:st.type,src:st.src||null,text:st.text||'',bg:st.bg||SBGS[0],createdAt:st.createdAt,views:{}});
+},
 async subscribe(){}
 };
+/* ---------- Sync listeners ---------- */
+function startSync(){
+if(syncOn||!RTDB||!S.me)return;syncOn=true;
+R('users').on('value',s=>{
+const rem=s.val()||{};
+for(const id in rem){const u=rem[id]||{};u.id=id;u.online=!!u.online;u.avatar=u.avatar||{col:AVCOLS[0],src:null};
+S.users[id]=Object.assign(S.users[id]||{},u);}
+renderRail();if(state.section!=='settings'&&state.section!=='profile')renderList();else if(state.section==='profile')renderProfilePage();
+if(state.infoOpen)renderInfo();
+});
+R('chats').on('value',s=>{
+const rem=s.val()||{};
+for(const id in rem){
+if(id.startsWith('saved_'))continue;
+const c=rem[id]||{};
+if(!c.members||!c.members[S.me])continue;
+const cur=S.chats[id]||{id,messages:[]};
+S.chats[id]=Object.assign(cur,{id,type:c.type||'private',peerId:c.peerId||cur.peerId,title:c.title||'',username:c.username||'',about:c.about||'',
+avatar:c.avatar||cur.avatar||null,members:c.members,invite:c.invite||'',permissions:c.permissions||{},
+pinnedIds:c.pinnedIds||cur.pinnedIds||[],lastMsg:c.lastMsg||null,createdAt:c.createdAt||cur.createdAt||Date.now(),
+unread:(c.unread&&c.unread[S.me])||0});
+const nl=S.chats[id].lastMsg;const nlTs=nl?nl.createdAt:0;
+if(!(id in prevLastMap)){prevLastMap[id]=nlTs}
+else if(nlTs!==prevLastMap[id]&&nl&&nl.senderId!==S.me&&state.chatId!==id){
+notifyIncoming(S.chats[id],{text:nl.text,type:nl.type,senderId:nl.senderId});
+}
+prevLastMap[id]=nlTs;
+}
+renderRail();renderList();if(state.infoOpen)renderInfo();
+});
+R('stories').on('value',s=>{
+const v=s.val()||{};const arr=[];
+for(const id in v){const st=v[id]||{};st.id=id;st.views=st.views?Object.keys(st.views):[];
+if(Date.now()-(st.createdAt||0)<864e5)arr.push(st)}
+S.stories=arr.concat(S.stories.filter(x=>x.demo&&Date.now()-x.createdAt<864e5));
+renderList();
+});
+const meRef=R('users/'+S.me);
+meRef.child('online').set(true);
+meRef.child('lastSeen').set(firebase.database.ServerValue.TIMESTAMP);
+meRef.child('online').onDisconnect().set(false);
+meRef.child('lastSeen').onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
+}
+function subscribeMessages(cid){
+unsubscribeMessages();
+if(!RTDB||cid.startsWith('saved_'))return;
+const cb=s=>{
+const v=s.val()||{};
+const arr=Object.values(v).map(normalizeMsg).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+const c=chatById(cid);if(!c)return;
+c.messages=arr;
+const upd={};
+arr.forEach(m=>{if(m.senderId!==S.me&&!(m.readBy||[]).includes(S.me))upd[m.id+'/readBy/'+S.me]=true});
+if(Object.keys(upd).length){
+R('messages/'+cid).update(upd);
+R('chats/'+cid+'/unread/'+S.me).set(0);
+const lm=c.lastMsg;if(lm&&lm.senderId!==S.me)R('chats/'+cid+'/lastMsg/readBy').transaction(a=>{a=a||[];if(!a.includes(S.me))a.push(S.me);return a});
+}
+c.unread=0;
+if(state.chatId===cid){renderMessages();if(state.stick)stickBottom()}
+renderList();
+};
+curMsgSub={id:cid,cb};
+R('messages/'+cid).on('value',cb);
+}
+function unsubscribeMessages(){
+if(curMsgSub&&RTDB){R('messages/'+curMsgSub.id).off('value',curMsgSub.cb);curMsgSub=null}
+}
 /* ---------- Avatars ---------- */
 const AVCOLS=[['#f7e8ab','#b8912a'],['#ffd9a0','#c07a2a'],['#ffe3f0','#c05a8a'],['#c9f0ff','#3a86b8'],['#d6ffd9','#3aa35a'],['#e6dcff','#7a5ac0'],['#ffd6d6','#c04a4a'],['#fff3c4','#a89018']];
 function avStyle(a){if(a&&a.src)return'';const c=(a&&a.col)||AVCOLS[0];return `background:linear-gradient(140deg,${c[0]},${c[1]})`}
@@ -675,15 +815,20 @@ function userAvatar(u){return u?u.avatar:null}
 function savedAv(){return{col:['#f7e8ab','#8c6a14'],src:null}}
 /* ---------- Helpers ---------- */
 function chatById(id){return S.chats[id]}
-function peerOf(c){return c&&c.type==='private'?S.users[c.peerId]:null}
+function peerOf(c){
+if(!c||c.type!=='private')return null;
+if(c.peerId&&S.users[c.peerId])return S.users[c.peerId];
+const ks=Object.keys(c.members||{}).filter(k=>k!==S.me);
+return S.users[ks[0]]||null;
+}
 function chatName(c){if(!c)return'';if(c.type==='saved')return 'پیام‌های ذخیره‌شده';if(c.type==='private'){const p=peerOf(c);return p?p.name:'کاربر حذف‌شده'}return c.title}
 function chatSub(c){
 if(c.type==='saved')return 'یادداشت‌های شخصی شما';
 if(c.type==='private'){const p=peerOf(c);if(!p)return '';return p.online?'آنلاین':relTime(p.lastSeen)}
-if(c.type==='group')return fa(Object.keys(c.members).length)+' عضو';
-return fa(Object.keys(c.members).length)+' مشترک';
+if(c.type==='group')return fa(Object.keys(c.members||{}).length)+' عضو';
+return fa(Object.keys(c.members||{}).length)+' مشترک';
 }
-function lastMsg(c){return c.messages&&c.messages.length?c.messages[c.messages.length-1]:null}
+function lastMsg(c){if(c.messages&&c.messages.length)return c.messages[c.messages.length-1];return c.lastMsg||null}
 function isMine(m){return m.senderId===S.me}
 function isAdmin(c){if(!c)return false;if(c.type==='private'||c.type==='saved')return true;const m=c.members[S.me];return !!m&&(m.role==='owner'||m.role==='admin')}
 function isOwner(c){const m=c&&c.members[S.me];return !!m&&m.role==='owner'}
@@ -713,7 +858,7 @@ return{t:who+mine+t,s:isMine(m)&&m.type!=='system'};
 function unreadCount(){return Object.values(S.chats).reduce((a,c)=>a+(c.unread||0),0)}
 function activeStories(uidv){return S.stories.filter(s=>s.userId===uidv&&Date.now()-s.createdAt<864e5).sort((a,b)=>a.createdAt-b.createdAt)}
 /* =========================================================
-AUTH
+AUTH (روی دیتابیس)
 ========================================================= */
 let authAv={type:'color',col:AVCOLS[0],src:null};
 let authMode='signup';
@@ -732,30 +877,42 @@ const nm=$('#inName');
 row.innerHTML=`<label class="av-upload" for="avFile">${ICO.plus}</label>`+
 AVCOLS.map((c,i)=>`<div class="av-pick ${authAv.src?'':(authAv.col===c?'sel':'')}" data-act="pick-col" data-i="${i}" style="background:linear-gradient(140deg,${c[0]},${c[1]})">${esc(((nm&&nm.value)||'N')[0])}</div>`).join('');
 }
-function signup(){
+async function signup(){
 const name=$('#inName').value.trim(),un=norm($('#inUser').value),pass=$('#inPass').value;
 const err=$('#authErr');err.classList.remove('show');
 if(name.length<2){return showErr('نام نمایشی باید حداقل ۲ حرف باشد')}
 if(!validUn(un)){return showErr('یوزرنیم: ۵ تا ۳۲ حرف انگلیسی، عدد یا _ و شروع با حرف')}
 if(pass.length<6){return showErr('رمز عبور باید حداقل ۶ کاراکتر باشد')}
-if(Object.values(S.users).some(u=>norm(u.username)===un&&u.id!==S.me))return showErr('این یوزرنیم قبلاً گرفته شده');
+if(Object.values(S.users).some(u=>!u.demo&&norm(u.username)===un&&u.id!==S.me))return showErr('این یوزرنیم قبلاً گرفته شده');
+if(!RTDB)return showErr('دیتابیس تعریف نشده؛ صفحه را دوباره باز کنید');
+if(!FB_OK)return showErr('هنوز به دیتابیس متصل نشدیم؛ چند لحظه صبر کنید و دوباره تلاش کنید');
 const id=uid('u');
-S.users[id]={id,name,username:un,pass,bio:'',avatar:{col:authAv.col,src:authAv.src},createdAt:Date.now(),lastSeen:Date.now(),online:true,contact:false,blocked:false};
+const res=await R('usernames/'+un).transaction(cur=>{if(cur===null)return{uid:id};return undefined},false,false).catch(()=>({committed:false}));
+if(!res||!res.committed)return showErr('این یوزرنیم قبلاً گرفته شده');
+const h=await hashPass(pass);
+await R('users/'+id).set({id,name,username:un,passHash:h,bio:'',avatar:{col:authAv.col,src:authAv.src},createdAt:Date.now(),lastSeen:Date.now(),online:true,contact:false,blocked:false});
+S.users[id]={id,name,username:un,bio:'',avatar:{col:authAv.col,src:authAv.src},createdAt:Date.now(),lastSeen:Date.now(),online:true,contact:false,blocked:false};
 S.me=id;S.chats['saved_'+id]={id:'saved_'+id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
-DB.save();enterApp();toast('به Nexo خوش آمدی، '+name+' 👋');
+DB.save();startSync();enterApp();toast('به Nexo خوش آمدی، '+name+' 👋');
 }
-function login(){
+async function login(){
 const un=norm($('#lgUser').value),pass=$('#lgPass').value;
 const err=$('#authErr');err.classList.remove('show');
 if(!un)return showErr('یوزرنیم را وارد کنید');
 if(!pass)return showErr('رمز عبور را وارد کنید');
-const u=Object.values(S.users).find(x=>norm(x.username)===un);
-if(!u)return showErr('کاربری با این یوزرنیم پیدا نشد؛ ابتدا «حساب جدید» بسازید.');
-if(!u.pass)return showErr('این حساب رمز عبور ندارد (نسخه قدیمی)؛ لطفاً حساب جدید بسازید.');
-if(u.pass!==pass)return showErr('رمز عبور نادرست است.');
-S.me=u.id;u.online=true;u.lastSeen=Date.now();
+if(!RTDB)return showErr('دیتابیس تعریف نشده؛ صفحه را دوباره باز کنید');
+if(!FB_OK)return showErr('هنوز به دیتابیس متصل نشدیم؛ چند لحظه صبر کنید و دوباره تلاش کنید');
+const sn=await R('usernames/'+un).once('value');const rec=sn.val();
+if(!rec)return showErr('کاربری با این یوزرنیم پیدا نشد؛ ابتدا «حساب جدید» بسازید.');
+const us=await R('users/'+rec.uid).once('value');const u=us.val();
+if(!u)return showErr('حساب پیدا نشد؛ دوباره تلاش کنید.');
+const h=await hashPass(pass);
+if((u.passHash||'')!==h)return showErr('رمز عبور نادرست است.');
+u.id=rec.uid;
+S.users[u.id]=Object.assign(S.users[u.id]||{},u,{id:u.id});
+S.me=u.id;
 if(!S.chats['saved_'+u.id])S.chats['saved_'+u.id]={id:'saved_'+u.id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
-DB.save();enterApp();toast('خوش برگشتی، '+u.name+' 👋');
+DB.save();startSync();enterApp();toast('خوش برگشتی، '+u.name+' 👋');
 }
 function showErr(t){const e=$('#authErr');e.textContent=t;e.classList.add('show')}
 /* =========================================================
@@ -763,7 +920,7 @@ RENDER
 ========================================================= */
 function enterApp(){
 $('#auth').classList.add('hidden');$('#app').classList.remove('hidden');
-applyTheme();renderAll();
+applyTheme();renderAll();startSync();
 }
 function applyTheme(){
 document.documentElement.dataset.theme=S.settings.theme;
@@ -773,7 +930,7 @@ document.body.classList.toggle('no-anim',!S.settings.animations);
 function renderAll(){renderRail();renderList();renderChat();renderInfo()}
 /* ---------- Rail ---------- */
 function renderRail(){
-const u=me();const un=unreadCount();
+const u=me();if(!u)return;const un=unreadCount();
 const items=[['chats',ICO.chat,'چت‌ها',un],['contacts',ICO.users,'مخاطبین',0],['search',ICO.search,'جستجو',0],['settings',ICO.cog,'تنظیمات',0]];
 const html=`<div class="logo" data-act="logo" title="Nexo">${LOGO}</div>
 ${items.map(([k,ic,lb,b])=>`<button class="rbtn ${state.section===k?'on':''}" data-act="nav" data-k="${k}" title="${lb}">${ic}${b?`<i class="badge">${fa(b>99?'99+':b)}</i>`:''}</button>`).join('')}
@@ -815,11 +972,11 @@ attachLongPress();
 }
 function storyBarHTML(){
 const u=me();const mine=activeStories(S.me);
-const others=Object.values(S.users).filter(x=>x.id!==S.me&&activeStories(x.id).length);
+const others=Object.values(S.users).filter(x=>x.id!==S.me&&!x.demo&&(x.contact||Object.values(S.chats).some(c=>c.type==='private'&&c.members&&c.members[x.id]&&c.members[S.me]))&&activeStories(x.id).length);
 if(!mine.length&&!others.length){
 return `<div class="story-bar"><div class="story-item" data-act="new-story">
 <div class="story-ring add">${avatarHTML(u.avatar,54,u.name)}<b class="splus">+</b></div><span class="sname">استوری شما</span></div>
-<div class="story-hint">استوری بگذار — تصویر یا متن؛ تا ۲۴ ساعت برای مخاطبینت ماندگار است.</div></div>`;
+<div class="story-hint">استوری بگذار — تصویر یا متن؛ تا ۲۴ ساعت برای کسانی که یوزرنیمت را دارند ماندگار است.</div></div>`;
 }
 return `<div class="story-bar">
 <div class="story-item" data-act="${mine.length?'view-story':'new-story'}" data-id="${S.me}">
@@ -870,7 +1027,7 @@ ${acts?`<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
 <button class="btn btn-ghost btn-sm" data-act="new-channel">${ICO.mega} کانال جدید</button></div>`:''}</div>`;
 }
 function contactsHTML(q){
-const all=Object.values(S.users).filter(u=>u.id!==S.me);
+const all=Object.values(S.users).filter(u=>u.id!==S.me&&!u.demo);
 const n=norm(q||'');
 const contacts=all.filter(u=>u.contact&&!u.blocked).filter(u=>!q||u.name.toLowerCase().includes(q.toLowerCase())||norm(u.username).includes(n));
 const others=all.filter(u=>!u.contact&&!u.blocked).filter(u=>!q||u.name.toLowerCase().includes(q.toLowerCase())||norm(u.username).includes(n));
@@ -891,7 +1048,7 @@ return html;
 function globalSearchHTML(q){
 if(!q)return `<div class="empty">${ICO.search.replace('class="ic"','class="ic" style="width:70px;height:70px;opacity:.35"')}<h3>جستجوی سراسری</h3><p>یوزرنیم کاربر، گروه یا کانال را با @ یا بدون @ بنویس؛ یا متن پیام‌ها را جستجو کن.</p></div>`;
 const n=norm(q);let out='';
-const users=Object.values(S.users).filter(u=>u.id!==S.me&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(q.toLowerCase())));
+const users=Object.values(S.users).filter(u=>u.id!==S.me&&!u.demo&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(q.toLowerCase())));
 const chats=Object.values(S.chats).filter(c=>c.type!=='private'&&c.type!=='saved'&&(c.title.toLowerCase().includes(q.toLowerCase())||(c.username&&norm(c.username).includes(n))));
 const publicByUn=Object.values(S.chats).filter(c=>c.username&&norm(c.username)===n&&!chats.includes(c));
 const foundChats=[...new Set([...chats,...publicByUn])];
@@ -930,7 +1087,7 @@ b.innerHTML=`<div class="item" data-act="nav" data-k="profile">${avatarHTML(u.av
 `<div class="irow" data-act="settings-go" data-k="${k}"><span class="ic">${ic}</span><div class="rc"><div class="rl">${t}</div><div class="rs">${s}</div></div><span style="color:var(--txt3)">${ICO.backR}</span></div>`).join('')+
 `<div class="sec-title">حساب</div>
 <div class="irow" data-act="switch-account"><span class="ic">${ICO.out}</span><div class="rc"><div class="rl">خروج از حساب</div><div class="rs">بازگشت به صفحه ورود</div></div></div>
-<div class="irow danger" data-act="delete-account"><span class="ic">${ICO.trash}</span><div class="rc"><div class="rl">حذف حساب کاربری</div><div class="rs">پاک شدن همه داده‌های محلی</div></div></div>`;
+<div class="irow danger" data-act="delete-account"><span class="ic">${ICO.trash}</span><div class="rc"><div class="rl">حذف حساب کاربری</div><div class="rs">پاک شدن حساب از دیتابیس و این دستگاه</div></div></div>`;
 return;
 }
 const p=SETTINGS_PAGES[state.settingsPage];
@@ -969,10 +1126,10 @@ data:{title:'داده‌ها و ذخیره‌سازی',rows:[
 {type:'action',act:'storage-info',label:'مصرف حافظه',icon:ICO.db},
 {type:'action',act:'export-data',label:'پشتیبان‌گیری از داده‌ها',icon:ICO.down,desc:'دریافت فایل JSON'},
 {type:'action',act:'clear-cache',label:'پاک کردن حافظه پنهان رسانه',icon:ICO.trash},
-{type:'action',act:'dev-data',label:'داده‌های آزمایشی',icon:ICO.sparkle,desc:'افزودن چند کاربر نمونه برای تست جستجو و استوری — قابل حذف'},
+{type:'action',act:'dev-data',label:'داده‌های آزمایشی',icon:ICO.sparkle,desc:'افزودن چند کاربر نمونه فقط روی همین دستگاه (بدون دیتابیس) — قابل حذف'},
 {type:'action',act:'reset-all',label:'بازنشانی کامل برنامه',icon:ICO.trash,danger:true}]},
 about:{title:'درباره Nexo',rows:[
-{type:'action',act:'about-info',label:'نسخه برنامه',icon:ICO.info,desc:'Nexo 1.1.0 — ساخت ایران'},
+{type:'action',act:'about-info',label:'نسخه برنامه',icon:ICO.info,desc:'Nexo 1.2.0 — متصل به Firebase Realtime Database'},
 {type:'action',act:'about-feat',label:'قابلیت‌ها',icon:ICO.star}]}};
 function themeCardsHTML(){
 return `<div class="sec-title">تم برنامه</div><div style="padding:0 14px 20px"><div class="theme-cards">
@@ -993,7 +1150,7 @@ return `<div class="sec-title">تم برنامه</div><div style="padding:0 14px
 <button class="btn btn-ghost btn-sm" data-act="set-theme" data-v="light">${ICO.sun} تم روشن</button></div></div>`;
 }
 function renderProfilePage(){
-const u=me();const mySt=activeStories(S.me);
+const u=me();if(!u)return;const mySt=activeStories(S.me);
 $('#lhead').innerHTML=`<div class="row"><button class="icon-btn" data-act="nav" data-k="settings">${ICO.backR}</button><h2>پروفایل من</h2>
 <button class="icon-btn" data-act="edit-me">${ICO.edit}</button></div>`;
 $('#lbody').innerHTML=`<div class="ihero">${avatarHTML(u.avatar,110,u.name,true)}<h2>${esc(u.name)}</h2>
@@ -1209,13 +1366,14 @@ if(m.type==='image')media.push(m);if(m.type==='video')media.push(m);
 if(m.type==='file')files.push(m);if(m.type==='voice')voices.push(m);
 if(m.text)(m.text.match(/https?:\/\/[^\s]+/g)||[]).forEach(u=>links.push({u,m}));
 });
-const members=Object.keys(c.members).map(id=>S.users[id]).filter(Boolean);
+const members=Object.keys(c.members||{}).map(id=>S.users[id]).filter(Boolean);
+const pid=peerOf(c);
 p.innerHTML=`<div class="ihead"><button class="icon-btn" data-act="close-info">${ICO.close}</button><h3>اطلاعات</h3>
 <button class="icon-btn" data-act="${mine&&c.type!=='private'&&c.type!=='saved'?'edit-chat':'edit-me'}">${ICO.edit}</button></div>
 <div class="ibody">
-<div class="ihero">${avatarHTML(av,104,chatName(c),c.type==='private'&&peerOf(c)&&peerOf(c).online)}
+<div class="ihero">${avatarHTML(av,104,chatName(c),c.type==='private'&&pid&&pid.online)}
 <h2>${esc(chatName(c))}</h2>
-<div class="st">${c.type==='private'?esc(peerOf(c)?(peerOf(c).online?'آنلاین':relTime(peerOf(c).lastSeen)):''):esc(chatSub(c))}</div>
+<div class="st">${c.type==='private'?esc(pid?(pid.online?'آنلاین':relTime(pid.lastSeen)):''):esc(chatSub(c))}</div>
 ${c.username?`<div class="st" style="direction:ltr;color:var(--gold);font-weight:700;margin-top:4px">@${esc(c.username)}</div>`:''}
 ${c.about?`<p style="color:var(--txt2);font-size:13.5px;margin:10px 16px 0">${esc(c.about)}</p>`:''}
 </div>
@@ -1244,7 +1402,7 @@ ${(c.type==='group'||c.type==='channel')&&mine?permsHTML(c):''}
 ${c.type!=='saved'?`<div class="irow" data-act="pin-chat" data-id="${c.id}"><span class="ic">${ICO.pin}</span><div class="rc"><div class="rl">${c.pinned?'برداشتن سنجاق':'سنجاق کردن گفتگو'}</div></div></div>
 <div class="irow" data-act="${c.archived?'unarchive-chat':'archive-chat'}" data-id="${c.id}"><span class="ic">${ICO.archive}</span><div class="rc"><div class="rl">${c.archived?'خروج از آرشیو':'آرشیو کردن'}</div></div></div>`:''}
 <div class="irow" data-act="clear-history" data-id="${c.id}"><span class="ic">${ICO.trash}</span><div class="rc"><div class="rl">پاک کردن تاریخچه</div><div class="rs">حذف همه پیام‌های این گفتگو</div></div></div>
-${c.type==='private'?`<div class="irow danger" data-act="block-user" data-id="${c.peerId}"><span class="ic">${ICO.ban}</span><div class="rc"><div class="rl">${peerOf(c)&&peerOf(c).blocked?'رفع مسدودی':'مسدود کردن کاربر'}</div></div></div>`:''}
+${c.type==='private'&&pid?`<div class="irow danger" data-act="block-user" data-id="${pid.id}"><span class="ic">${ICO.ban}</span><div class="rc"><div class="rl">${pid.blocked?'رفع مسدودی':'مسدود کردن کاربر'}</div></div></div>`:''}
 ${c.type!=='saved'?`<div class="irow danger" data-act="leave-chat" data-id="${c.id}"><span class="ic">${ICO.out}</span><div class="rc"><div class="rl">${isOwner(c)?'حذف گفتگو':(c.type==='channel'?'لغو عضویت':'خروج و حذف')}</div></div></div>`:''}
 <div style="height:24px"></div>
 </div>`;
@@ -1257,8 +1415,8 @@ return `<div class="mgrid">${arr.slice().reverse().map(m=>m.type==='video'?`<vid
 function membersHTML(c,members,mine){
 return `<div style="padding:8px 0">
 ${mine?`<div class="mrow" data-act="add-member" style="margin:0 8px"><div class="avatar" style="width:44px;height:44px;font-size:20px;background:var(--ggrad)">+</div><div class="rc"><div class="rn">افزودن عضو</div><div class="rs">از مخاطبین یا با یوزرنیم</div></div></div>`:''}
-${members.sort((a,b)=>{const ra=c.members[a.id].role,rb=c.members[b.id].role;const o={owner:0,admin:1,member:2};return o[ra]-o[rb]}).map(u=>{
-const role=c.members[u.id].role;
+${members.sort((a,b)=>{const ra=(c.members[a.id]||{}).role,rb=(c.members[b.id]||{}).role;const o={owner:0,admin:1,member:2};return (o[ra]||2)-(o[rb]||2)}).map(u=>{
+const role=(c.members[u.id]||{}).role||'member';
 return `<div class="mem" data-act="member-menu" data-id="${u.id}">${avatarHTML(u.avatar,44,u.name,u.online)}
 <div class="mc"><div class="mn">${esc(u.name)} ${role!=='member'?`<span class="role-tag">${role==='owner'?'صاحب':'مدیر'}</span>`:''} ${u.id===S.me?'<span class="role-tag" style="background:var(--bg4);color:var(--txt2)">شما</span>':''}</div>
 <div class="ms">${u.online?'آنلاین':relTime(u.lastSeen)}${c.members[u.id].restricted&&c.members[u.id].restricted>Date.now()?' • محدود شده':''}</div></div>
@@ -1277,19 +1435,30 @@ ACTIONS
 function openChat(id){
 const c=chatById(id);if(!c)return;
 state.chatId=id;state.replyTo=null;state.editId=null;state.selectMode=false;state.selected.clear();state.infoOpen=false;
-c.unread=0;c.messages.forEach(m=>{if(!isMine(m)&&!(m.readBy||[]).includes(S.me))(m.readBy=m.readBy||[]).push(S.me)});
-DB.save();$('#app').classList.add('chat-open');renderAll();
+c.unread=0;
+if(RTDB&&!id.startsWith('saved_'))R('chats/'+id+'/unread/'+S.me).set(0);
+$('#app').classList.add('chat-open');renderAll();subscribeMessages(id);
 }
-function closeChat(){state.chatId=null;$('#app').classList.remove('chat-open');state.infoOpen=false;renderAll()}
+function closeChat(){state.chatId=null;unsubscribeMessages();$('#app').classList.remove('chat-open');state.infoOpen=false;renderAll()}
 function startPrivateChat(userId){
-let c=Object.values(S.chats).find(x=>x.type==='private'&&x.peerId===userId);
-if(!c){c={id:uid('c'),type:'private',peerId:userId,messages:[],unread:0,muted:false,pinned:false,archived:false,createdAt:Date.now()};S.chats[c.id]=c;DB.save()}
-S.users[userId].contact=true;DB.save();openChat(c.id);renderList();
+const id='p_'+[S.me,userId].sort().join('_');
+let c=S.chats[id];
+if(!c){c={id,type:'private',peerId:userId,members:{[S.me]:true,[userId]:true},messages:[],unread:0,muted:false,pinned:false,archived:false,createdAt:Date.now()};S.chats[id]=c}
+if(S.users[userId])S.users[userId].contact=true;
+DB.save();
+if(RTDB&&FB_OK)R('chats/'+id).transaction(cur=>{
+if(cur===null)return{type:'private',peerId:userId,members:{[S.me]:true,[userId]:true},createdAt:c.createdAt,title:'',username:''};
+if(cur.members&&!cur.members[S.me])return Object.assign({},cur,{members:Object.assign({},cur.members,{[S.me]:true})});
+return cur;
+},false,false).catch(()=>{});
+openChat(id);renderList();
 }
 function sendText(){
 const ta=$('#cin');if(!ta)return;const txt=ta.value.trim();if(!txt)return;
 const c=chatById(state.chatId);if(!c)return;
-if(state.editId){const m=findMsg(state.editId);if(m){m.text=txt;m.editedAt=Date.now();state.editId=null;DB.save();ta.value='';renderMessages();renderComposerBanner();renderList()}return}
+if(state.editId){const m=findMsg(state.editId);if(m){m.text=txt;m.editedAt=Date.now();state.editId=null;DB.save();ta.value='';
+if(RTDB&&!c.id.startsWith('saved_'))R('messages/'+c.id+'/'+m.id).update({text:txt,editedAt:m.editedAt});
+renderMessages();renderComposerBanner();renderList()}return}
 const onlyEmoji=/^(\p{Extended_Pictographic}|\s|️){1,4}$/u.test(txt)&&txt.length<=10;
 pushMsg(c,{type:onlyEmoji?'sticker':'text',text:txt});
 ta.value='';ta.style.height='auto';$('#sendBtn').innerHTML=ICO.mic;$('#sendBtn').dataset.act='start-rec';
@@ -1323,11 +1492,12 @@ res({src:cv.toDataURL('image/jpeg',q),w,h})};im.src=r.result};r.readAsDataURL(fi
 async function handleImage(f){
 const c=chatById(state.chatId);if(!c)return;
 toast('در حال آماده‌سازی تصویر…');
-const d=await compressImage(f);pushMsg(c,{type:'image',media:{src:d.src,w:d.w,h:d.h,name:f.name,size:f.size}});renderList();
+const d=await compressImage(f,1000,.7);
+pushMsg(c,{type:'image',media:{src:d.src,w:d.w,h:d.h,name:f.name,size:f.size}});renderList();
 }
 async function handleFile(f){
 const c=chatById(state.chatId);if(!c)return;
-if(f.size>4*1024*1024){toast('حجم فایل برای ذخیره محلی زیاد است (حداکثر ۴ مگابایت)','err');return}
+if(f.size>1.5*1024*1024){toast('حجم فایل برای ارسال به دیتابیس زیاد است (حداکثر ۱٫۵ مگابایت)','err');return}
 const src=await fileToDataURL(f);
 pushMsg(c,{type:f.type.startsWith('video/')?'video':'file',media:{src,name:f.name,size:f.size,mime:f.type}});renderList();
 }
@@ -1380,15 +1550,17 @@ function newPrivateModal(){
 modal({title:'گفتگوی جدید',icon:ICO.search,
 body:`<div class="search-box" style="margin-bottom:14px">${ICO.search}<input id="npQ" placeholder="یوزرنیم را با @ یا بدون @ وارد کنید…" style="direction:ltr"></div>
 <div id="npRes"></div>
-<div class="note" style="margin-top:12px">جستجو بر اساس یوزرنیم دقیق یا بخشی از آن انجام می‌شود؛ کانال‌ها و گروه‌های عمومی هم پیدا می‌شوند.</div>`,
+<div class="note" style="margin-top:12px">جستجو مستقیم از دیتابیس انجام می‌شود؛ کاربران، گروه‌ها و کانال‌های عمومی پیدا می‌شوند.</div>`,
 onMount:ov=>{const q=$('#npQ',ov),r=$('#npRes',ov);
-const run=()=>{const v=q.value.trim();if(!v){r.innerHTML=`<div class="sec-title">مخاطبین</div>`+(Object.values(S.users).filter(u=>u.contact&&u.id!==S.me).map(u=>rowU(u)).join('')||`<p style="color:var(--txt2);font-size:13px;padding:0 8px">مخاطبی ندارید — یوزرنیم را بالا جستجو کنید.</p>`);return}
+const run=async()=>{const v=q.value.trim();if(!v){r.innerHTML=`<div class="sec-title">مخاطبین</div>`+(Object.values(S.users).filter(u=>u.contact&&u.id!==S.me&&!u.demo).map(u=>rowU(u)).join('')||`<p style="color:var(--txt2);font-size:13px;padding:0 8px">مخاطبی ندارید — یوزرنیم را بالا جستجو کنید.</p>`);return}
 const n=norm(v);
-const users=Object.values(S.users).filter(u=>u.id!==S.me&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(v.toLowerCase())));
+const users=Object.values(S.users).filter(u=>u.id!==S.me&&!u.demo&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(v.toLowerCase())));
 const chats=Object.values(S.chats).filter(c=>(c.type==='group'||c.type==='channel')&&((c.title||'').toLowerCase().includes(v.toLowerCase())||(c.username&&norm(c.username).includes(n))));
-r.innerHTML=(users.length?`<div class="sec-title">کاربران</div>`+users.map(u=>rowU(u)).join(''):'')+
+let extra='';
+if(!users.length&&validUn(n)){const u=await Backend.getUserByUsername(n);if(u&&!S.users[u.id])extra=rowU(u)}
+r.innerHTML=(users.length?`<div class="sec-title">کاربران</div>`+users.map(u=>rowU(u)).join('')+extra:'')+
 (chats.length?`<div class="sec-title">گروه‌ها و کانال‌ها</div>`+chats.map(c=>`<div class="mrow" data-act="open-chat" data-id="${c.id}">${avatarHTML(c.avatar,46,c.title)}<div class="rc"><div class="rn">${esc(c.title)}</div><div class="rs">${c.username?'@'+esc(c.username):chatSub(c)}</div></div></div>`).join(''):'')+
-(!users.length&&!chats.length?`<div class="mrow" data-act="lookup" data-un="${esc(n)}">${avatarHTML({col:['#f7e8ab','#a89018']},46,'@')}<div class="rc"><div class="rn">یوزرنیم «${esc(n)}» پیدا نشد</div><div class="rs">با اتصال پایگاه‌داده، کاربران سراسری اینجا یافت می‌شوند</div></div></div>`:'')};
+(!users.length&&!chats.length&&!extra?`<div class="mrow" data-act="lookup" data-un="${esc(n)}">${avatarHTML({col:['#f7e8ab','#a89018']},46,'@')}<div class="rc"><div class="rn">یوزرنیم «${esc(n)}» پیدا نشد</div><div class="rs">برای جستجوی دوباره در دیتابیس کلیک کنید</div></div></div>`:'')};
 q.oninput=run;run();q.focus();
 function rowU(u){return `<div class="mrow" data-act="start-private" data-id="${u.id}">${avatarHTML(u.avatar,46,u.name,u.online)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)} • ${u.online?'آنلاین':relTime(u.lastSeen)}</div></div></div>`}}});
 }
@@ -1407,7 +1579,7 @@ let av=null;const sel=new Set();
 $('#grpAv',ov).onchange=async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);av={src:d.src};$('#grpAvPrev',ov).innerHTML=avatarHTML(av,74,'گ')};
 const list=$('#grpList',ov),q=$('#grpQ',ov);
 const render=()=>{const v=norm(q.value);
-const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
+const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&!u.demo&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
 list.innerHTML=arr.length?arr.map(u=>`<div class="mrow ${sel.has(u.id)?'on':''}" data-sel="${u.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="color:var(--txt2);font-size:13px;text-align:center;padding:14px">کاربری پیدا نشد. از «یوزرنیم» برای افزودن استفاده کنید.</p>`;
 $$('[data-sel]',list).forEach(el2=>el2.onclick=()=>{const id=el2.dataset.sel;sel.has(id)?sel.delete(id):sel.add(id);render()})};
 q.oninput=render;render();
@@ -1424,9 +1596,16 @@ const cols=AVCOLS[Math.floor(Math.random()*AVCOLS.length)];
 S.chats[id]={id,type:'group',title:name,username:username||'',about:about||'',avatar:avatar||{col:cols},members:mem,messages:[],
 pinnedIds:[],unread:0,muted:false,pinned:false,archived:false,invite:uid('inv').slice(-8),createdAt:Date.now(),
 permissions:{send:true,media:true,polls:true,addMembers:true,pin:true,info:false},createdBy:S.me};
+if(RTDB&&FB_OK)R('chats/'+id).set({type:'group',title:name,username:username||'',about:about||'',avatar:avatar||{col:cols},members:mem,
+invite:S.chats[id].invite,createdAt:S.chats[id].createdAt,permissions:S.chats[id].permissions,createdBy:S.me});
 pushSystem(id,`گروه «${name}» ساخته شد`);DB.save();state.section='chats';openChat(id);renderAll();toast('گروه ساخته شد ✨');
 }
-function pushSystem(chatId,text){const c=chatById(chatId);if(!c)return;c.messages.push({id:uid('m'),chatId,type:'system',text,senderId:S.me,createdAt:Date.now(),reactions:{}})}
+function pushSystem(chatId,text){
+const c=chatById(chatId);if(!c)return;
+const m={id:uid('m'),chatId,type:'system',text,senderId:S.me,createdAt:Date.now(),reactions:{}};
+c.messages.push(m);DB.save();Backend.sendMessage(chatId,m);
+if(state.chatId===chatId)appendMessage(m,true);
+}
 function newChannelModal(){
 modal({title:'کانال جدید',icon:ICO.mega,wide:true,
 body:`<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
@@ -1447,9 +1626,11 @@ const un=kind==='public'?norm($('#chUn',ov).value):'';
 if(kind==='public'){if(!validUn(un))return toast('یوزرنیم کانال نامعتبر است (۵ تا ۳۲ حرف انگلیسی)','err');
 if(Object.values(S.chats).some(c=>c.username&&norm(c.username)===un))return toast('این یوزرنیم قبلاً استفاده شده','err')}
 const id=uid('c');const mem={};mem[S.me]={role:'owner',joined:Date.now()};
+const inv=uid('inv').slice(-8);
 S.chats[id]={id,type:'channel',title:name,username:un,about:$('#chAbout',ov).value.trim(),avatar:av||{col:['#c9f0ff','#3a86b8']},
 members:mem,messages:[],pinnedIds:[],unread:0,muted:false,pinned:false,archived:false,kind,
-invite:uid('inv').slice(-8),createdAt:Date.now(),createdBy:S.me,permissions:{}};
+invite:inv,createdAt:Date.now(),createdBy:S.me,permissions:{}};
+if(RTDB&&FB_OK)R('chats/'+id).set({type:'channel',kind,title:name,username:un,about:S.chats[id].about,avatar:S.chats[id].avatar,members:mem,invite:inv,createdAt:S.chats[id].createdAt,createdBy:S.me,permissions:{}});
 pushSystem(id,`کانال «${name}» ایجاد شد`);DB.save();closeModal(ov);state.section='chats';openChat(id);renderAll();toast('کانال آماده انتشار است 📣')}}});
 }
 function joinByLinkModal(){
@@ -1457,7 +1638,8 @@ promptBox('پیوستن با لینک دعوت',[{k:'link',label:'لینک دع�
 const tok=(v.link.split('/').pop()||'').trim();
 const c=Object.values(S.chats).find(x=>x.invite===tok);
 if(!c)return toast('لینک معتبری پیدا نشد','err'),false;
-if(!c.members[S.me]){c.members[S.me]={role:'member',joined:Date.now()};pushSystem(c.id,me().name+' به گفتگو پیوست');DB.save()}
+if(!c.members[S.me]){c.members[S.me]={role:'member',joined:Date.now()};pushSystem(c.id,me().name+' به گفتگو پیوست');DB.save();
+if(RTDB&&FB_OK)R('chats/'+c.id+'/members/'+S.me).set({role:'member',joined:Date.now()})}
 openChat(c.id);renderAll();toast('عضو شدید ✅')},'پیوستن');
 }
 /* ---------- Profile / edit ---------- */
@@ -1472,9 +1654,18 @@ promptBox('ویرایش پروفایل',[
 if(v.name.length<2)return toast('نام کوتاه است','err'),false;
 const un=norm(v.username);
 if(!validUn(un))return toast('یوزرنیم نامعتبر است','err'),false;
-if(Object.values(S.users).some(x=>x.id!==S.me&&norm(x.username)===un))return toast('یوزرنیم تکراری است','err'),false;
+if(Object.values(S.users).some(x=>x.id!==S.me&&!x.demo&&norm(x.username)===un))return toast('یوزرنیم تکراری است','err'),false;
+const oldUn=u.username;
 u.name=v.name;u.username=un;u.bio=v.bio;if(v.av)u.avatar={src:v.av};
-DB.save();renderAll();toast('پروفایل به‌روزرسانی شد ✅')},'ذخیره');
+DB.save();
+if(RTDB&&FB_OK){
+R('users/'+S.me).update({name:u.name,username:un,bio:u.bio,avatar:u.avatar});
+if(un!==oldUn){
+R('usernames/'+un).transaction(cur=>cur===null?{uid:S.me}:undefined,false,false).catch(()=>{});
+R('usernames/'+oldUn).remove();
+}
+}
+renderAll();toast('پروفایل به‌روزرسانی شد ✅')},'ذخیره');
 }
 function editChatModal(id){
 const c=chatById(id);if(!c)return;
@@ -1489,7 +1680,9 @@ if(v.title.length<2)return toast('نام را وارد کنید','err'),false;
 const un=norm(v.username);
 if(un&&(!validUn(un)||Object.values(S.chats).some(x=>x.id!==id&&x.username&&norm(x.username)===un)))return toast('یوزرنیم نامعتبر یا تکراری','err'),false;
 c.title=v.title;c.username=un;c.about=v.about;if(v.av)c.avatar={src:v.av};
-DB.save();renderAll();toast('اطلاعات به‌روزرسانی شد ✅')},'ذخیره');
+DB.save();
+if(RTDB&&FB_OK)R('chats/'+id).update({title:c.title,username:un,about:c.about,avatar:c.avatar});
+renderAll();toast('اطلاعات به‌روزرسانی شد ✅')},'ذخیره');
 }
 function addMemberModal(id){
 const c=chatById(id);if(!c)return;
@@ -1497,7 +1690,7 @@ modal({title:'افزودن عضو',icon:ICO.users,
 body:`<div class="search-box" style="margin-bottom:12px">${ICO.search}<input id="amQ" placeholder="یوزرنیم یا نام مخاطب…"></div><div id="amList"></div>`,
 onMount:ov=>{const q=$('#amQ',ov),l=$('#amList',ov);
 const run=()=>{const v=norm(q.value);
-const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!c.members[u.id]&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
+const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!u.demo&&!c.members[u.id]&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
 l.innerHTML=arr.length?arr.map(u=>`<div class="mrow" data-act="add-member-do" data-id="${u.id}" data-cid="${c.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span style="color:var(--gold)">${ICO.plus}</span></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px;font-size:13px">کاربری برای افزودن پیدا نشد.</p>`};
 q.oninput=run;run();q.focus()}});
 }
@@ -1551,7 +1744,7 @@ const close=()=>{d.style.animation='fade .2s reverse both';setTimeout(()=>d.remo
 $('#lbX',d).onclick=close;d.onclick=e=>{if(e.target===d)close()};
 }
 function reactMenu(mid,anchor){
-const set=['👍','❤️','🔥','😮','😂','','😢','👏'];
+const set=['👍','❤️','🔥','','😂','🎉','😢','👏'];
 menuAt(anchor,`<div style="display:flex;gap:4px;padding:4px">${set.map(e=>`<button class="ebtn" data-act="react" data-mid="${mid}" data-e="${e}" style="width:38px;height:38px">${e}</button>`).join('')}</div>`);
 }
 function menuAt(anchor,html,opts={}){
@@ -1570,7 +1763,7 @@ function closeMenu(){if(curMenu){curMenu.remove();curMenu=null}}
 function outsideMenu(){closeMenu()}
 /* ---------- Chat & message menus ---------- */
 function chatMenu(id,anchor){
-const c=chatById(id);if(!c)return;const mine=isAdmin(c);
+const c=chatById(id);if(!c)return;const mine=isAdmin(c);const pid=peerOf(c);
 const items=[];
 items.push(`<button class="mi" data-act="open-info" data-id="${id}">${ICO.info} اطلاعات ${c.type==='private'?'کاربر':(c.type==='channel'?'کانال':'گروه')}</button>`);
 items.push(`<button class="mi" data-act="chat-search" data-id="${id}">${ICO.search} جستجو در گفتگو</button>`);
@@ -1579,7 +1772,7 @@ items.push(`<button class="mi" data-act="pin-chat" data-id="${id}">${ICO.pin} ${
 items.push(`<button class="mi" data-act="mark-unread" data-id="${id}">${ICO.check} علامت به‌عنوان خوانده‌نشده</button>`);
 items.push(`<button class="mi" data-act="${c.archived?'unarchive-chat':'archive-chat'}" data-id="${id}">${ICO.archive} ${c.archived?'خروج از آرشیو':'آرشیو'}</button>`);
 if(c.type!=='saved')items.push(`<button class="mi" data-act="copy-invite" data-id="${id}">${ICO.link} کپی لینک دعوت</button>`);
-if(c.type==='private')items.push(`<button class="mi" data-act="block-user" data-id="${c.peerId}">${ICO.ban} ${peerOf(c)&&peerOf(c).blocked?'رفع مسدودی':'مسدود کردن'}</button>`);
+if(c.type==='private'&&pid)items.push(`<button class="mi" data-act="block-user" data-id="${pid.id}">${ICO.ban} ${pid.blocked?'رفع مسدودی':'مسدود کردن'}</button>`);
 if(mine&&c.type!=='private'&&c.type!=='saved')items.push(`<button class="mi" data-act="edit-chat" data-id="${id}">${ICO.edit} ویرایش اطلاعات</button>`);
 items.push('<div class="msep"></div>');
 items.push(`<button class="mi" data-act="clear-history" data-id="${id}">${ICO.trash} پاک کردن تاریخچه</button>`);
@@ -1590,7 +1783,7 @@ function msgMenu(mid,anchor){
 const m=findMsg(mid);if(!m)return;const c=msgChat(mid);const mine=isMine(m);const adm=isAdmin(c);
 const items=[];
 if(m.type!=='system'){
-items.push(`<div style="display:flex;gap:4px;padding:4px 6px 8px">${['👍','❤️','🔥','😂','😮','🎉'].map(e=>`<button class="ebtn" data-act="react" data-mid="${mid}" data-e="${e}">${e}</button>`).join('')}</div><div class="msep"></div>`);
+items.push(`<div style="display:flex;gap:4px;padding:4px 6px 8px">${['👍','❤️','🔥','😂','😮',''].map(e=>`<button class="ebtn" data-act="react" data-mid="${mid}" data-e="${e}">${e}</button>`).join('')}</div><div class="msep"></div>`);
 if(canPost(c))items.push(`<button class="mi" data-act="reply" data-mid="${mid}">${ICO.reply} پاسخ</button>`);
 items.push(`<button class="mi" data-act="copy-msg" data-mid="${mid}">${ICO.copy} کپی متن</button>`);
 items.push(`<button class="mi" data-act="forward" data-mid="${mid}">${ICO.fwd} ارسال به…</button>`);
@@ -1627,14 +1820,14 @@ function fb(){const a=document.createElement('textarea');a.value=t;document.body
 }
 /* ---------- Emoji picker ---------- */
 const EMO={
-'صورتک':['😀','😃','😄','😁','','😅','','😂','🙂','','😉','😊','😇','🥰','😍','','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','','🤗','🤭','🤫','','🤨','','😑','😶','😏','😒','','😬','','😌','😔','😪','🤤','','😷','','','🤢','','','🥶','','😵','🤯','🤠','','😎','','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡',''],
-'دست و قلب':['👋','','🖐','✋','🖖','','🤌','','✌️','🤞','','🤘','🤙','','👉','👆','','','☝️','👍','','✊','👊','','🤜','👏','🙌','👐','🤲','','💪','','❤️','','💛','','💙','💜','🖤','🤍','','💔','️','💕','💞','💓','💗','💖','💘','💝','💯','💢','💥','💫','💦','💨','🕳','💤'],
-'حیوانات و طبیعت':['🐶','🐱','','🐹','🐰','🦊','','','🐨','🐯','🦁','','🐷','🐸','🐵','','🙉','','','🐔','🐧','🐦','🐤','','','🦆','🦅','🦉','🦇','🐺','','','🦄','🐝','🐛','','🐌','🐞','','🦟','🦗','','','🦂','','🐍','🦎','🦖','🦕','','🦑','🦐','🦞','🦀','🐡','','🐟','🐬','🐳','🐋','🦈','🐊','','','🦓','🦍','','🐘','🦛','','🐪','🐫','','🦘','','🐄','🐎','🐖','🐏','🐑','🦙','🐐','','','🐩','🦮','','🐓','🦃','🦚','🦜','🦢','🦩','🕊','🐇','','','🦡','🦦','🦥','🐁','','🐿','🦔','🐉','🐲','','🎄','🌲','','🌴','🌱','🌿','☘️','🍀','','','🍃','🍂','🍁','🌾','🌺','','','🥀','🌷','🌸','','🍄','🌰','🌎','🌍','','🌕','','🌗','🌘','','🌒','🌓','🌔','🌙','','⭐','','✨','','☄️','💥','🔥','','','☀️','','⛅','🌥','️','','🌧','','','🌨','️','☃️','⛄','','💧','💦','☔'],
-'غذا و نوشیدنی':['🍏','','🍐','🍊','','','🍉','🍇','🍓','','🍈','🍒','🍑','🥭','🍍','🥥','','','🍆','','','🥬','🥒','🌶','🫑','🥕','','🧅','🥔','🍠','🥐','🥯','🍞','🥖','','','🥚','🍳','🧈','🥞','🧇','','','🍗','🍖','','🍔','🍟','🍕','🫓','🥪','','','🌮','','🫔','','🥘','🫕','🥫','🍝','🍜','🍲','🍛','','🍱','🥟','','🍤','🍙','🍚','🍘','🍥','','🥮','🍢','🍡','🍧','','🍦','🥧','🧁','','🎂','🍮','🍭','🍬','','🍿','🍩','🍪','🌰','','🍯','🥛','🍼','☕','🍵','','🥤','','🍶','','🍻','','🍷','','🍸','🍹','🧉','','🥄','','🍽','','🧊'],
-'فعالیت و سفر':['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','','🥍','🏏','🪃','','⛳','','','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸','🥌','','⛷','🏂','','🏋️','🤼','','⛹️','🤺','','🏌️','🏇','🧘','','🏊','🤽','','🧗','','🚵','','🏆','','🥈','','🏅','','🎭','','🎬','','🎧','','🎹','','🎷','','🪗','','🎻','🎲','♟','🎯','🎳','🎮','🎰','🧩','🚗','🚕','🚙','🚌','🚎','','🚓','🚑','🚒','🚐','🛻','🚚','','🚜','🛵','🏍','🛺','🚲','','🚨','','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🚀','','🚁','🛶','','','🛥','🛳','⛴','','🗺','','🗽','🗼','','🏯','🏟','🎡','🎢','🎠','⛲','⛱','🏖','🏝','🏜','🌋','⛰','🏔','🗻','','⛺','','🏡','','🏚','','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','','🕋','⛩'],
-'اشیا و نماد':['⌚','','📲','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥','','🎞','','☎️','','📠','📺','📻','🎙','','🎛','','⏱','⏲','⏰','','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯','🪔','','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','','🧰','🪛','🔧','','⚒','','','🔩','️','','⛓','🧲','🔫','💣','🧨','','','🗡','⚔️','🛡','🚬','⚰️','🪦','⚱️','🏺','','📿','🧿','💈','⚗️','🔭','🔬','🕳','','🩺','💊','💉','🩸','🧬','','🧫','','🌡','','🪠','🧺','🧻','🚽','','🚿','','🛀','','🪥','🪒','🧽','🪣','🧴','🛎','🔑','🗝','','🪑','🛋','🛏','🛌','','🪆','🖼','','🛒','','🎈','','🎀','🪄','🎊','🎉','🎎','🏮','🎐','🧧','️','📩','📨','📧','','📥','📤','📦','🏷','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','','🧾','','📈','','✅','❌','❓','❗','‼️','⁉️','🔴','🟠','🟡','🟢','🔵','','⚫','⚪','🟤','🔺','','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','⬛','⬜','🔈','🔇','🔉','🔊','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
+'صورتک':['😀','😃','😄','😁','😆','😅','','😂','🙂','🙃','😉','😊','😇','','😍','','😘','😗','😚','😙','🥲','😋','😛','😜','','😝','','🤗','🤭','🤫','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','','😷','🤒','🤕','🤢','🤮','🥵','','🥴','😵','🤯','🤠','','😎','','🧐','😕','😟','🙁','','😯','😲','😳','🥺','','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','','😡',''],
+'دست و قلب':['👋','🤚','🖐','','🖖','👌','','🤏','️','🤞','🫰','🤘','🤙','👈','👉','👆','🖕','','☝️','','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','','💪','','❤️','🧡','💛','💚','💙','💜','🖤','','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💯','💢','💥','💫','💦','💨','🕳','💤'],
+'حیوانات و طبیعت':['🐶','','🐭','','🐰','🦊','🐻','🐼','🐨','🐯','','🐮','🐷','🐸','🐵','🙈','','🙊','','🐔','🐧','🐦','🐤','🐣','🐥','','🦅','','🦇','','🐗','','🦄','🐝','🐛','','🐌','','🐜','🦟','🦗','🕷','🕸','🦂','🐢','🐍','🦎','🦖','🦕','','🦑','🦐','🦞','🦀','','🐠','','🐬','🐳','🐋','🦈','','🐅','','🦓','','🦧','🐘','🦛','🦏','🐪','','🦒','','🐂','🐄','','🐖','🐏','🐑','🦙','','🦌','🐕','🐩','🦮','','🐓','🦃','🦚','🦜','🦢','🦩','🕊','🐇','🦝','','🦡','🦦','','🐁','','🐿','','🐉','','🌵','','🌲','','🌴','','🌿','☘️','🍀','','🪴','🎋','🍃','🍂','🍁','🌾','','🌻','','🥀','🌷','','🌼','','💐','🍄','🌰','🌎','🌍','🌏','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','','🌛','⭐','🌟','✨','⚡','️','💥','','🌪','🌈','☀️','🌤','⛅','🌥','☁️','','🌧','⛈','🌩','🌨','❄️','☃️','⛄','💧','💦',''],
+'غذا و نوشیدنی':['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','','🥥','','🍅','🍆','🥑','🥦','🥬','🥒','🌶','🫑','','🧄','','🥔','','🥐','','🍞','🥖','🥨','🧀','','🍳','','🥞','🧇','','🍗','','🍔','','🍕','','🥪','','🌮','🌯','🫔','','🧆','','🍲','','🍣','🍱','','🦪','','🍙','','🍘','','🥠','','🍢','🍡','🍧','🍨','🍦','🥧','','🍰','','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','','🍯','🥛','🍼','☕','🍵','','🥤','','🍶','','🍻','','🍷','','🍸','','🧉','','🥄','','🍽','','🧊'],
+'فعالیت و سفر':['⚽','🏀','🏈','⚾','🥎','','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','','🪃','','⛳','🪁','🏹','🎣','🤿','','🥋','🎽','🛹','🛼','','⛸','🥌','🎿','⛷','','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','','🧗','🚵','','🎭','','🎬','','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','','🎲','♟','','🎳','🎮','🎰','🧩','✈️','🛫','🛬','','🛸','','🛶','⛵','🚤','','🛳','⛴','','🗺','','🗽','🗼','','🏯','🏟','🎡','🎢','🎠','⛲','⛱','🏖','🏝','','🌋','⛰','🏔','','⛺','','🏠','🏡','🏘','🏚','🏗','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','','🕋','','🚗','🚕','🚙','🚌','🚎','','🚓','🚑','🚒','','🚚','🚛','🚜','🛵','','🛺','','🛴',''],
+'اشیا و نماد':['⌚','','📲','💻','⌨️','🖥','','🖱','🖲','','🗜','💽','💾','💿','📀','','📷','📸','📹','🎥','','🎞','','☎️','📟','📠','📺','','🎙','','🎛','','⏱','⏲','','🕰','','⏳','📡','🔋','🔌','💡','🔦','🕯','🪔','','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','🪜','','🪛','🔧','','⚒','','⛏','🔩','⚙️','🧱','⛓','🧲','🔫','💣','🧨','','🔪','🗡','⚔️','🛡','','⚰️','','⚱️','🏺','🔮','📿','','💈','️','','🔬','🕳','','🩺','💊','💉','🩸','🧬','🦠','🧫','','🌡','','🧺','','🚽','','🚿','','🛀','🧼','','🪥','🪒','🛎','🔑','🗝','','🪑','🛋','🛏','🛌','','🪆','🖼','','🛒','','🎈','','🎀','🪄','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','','📥','📤','📦','🏷','','📪','','📬','','📮','','📜','','📄','','🧾','','📈','','✅','❌','❓','❗','‼️','⁉️','🔴','','🟡','','🔵','','⚫','','🟤','🔺','🔻','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','⬛','⬜','🔈','🔇','🔉','🔊','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','','','🕑','','🕓','','🕕','','🕗','','🕙','','🕛']
 };
-const STICKERS=['😍','🤩','🔥','💎','👑','🌹','✨','🎉','','🥇','🦁','🚀','❤️','😎','','🥹','☀️','🍀','🎁','🏆','👏','🙏','','🥰','😴','','🫶','','👻',''];
+const STICKERS=['😍','🤩','','💎','👑','🌹','✨','🎉','','🥇','','🚀','❤️','😎','','🥳','️','🍀','🎁','🏆','👏','🙏','','🥰','😴','🤯','🫶','🫡','','💪'];
 const RECENT_KEY='nexo.recent.emoji';
 let pickerOpen=false,pickerCat='صورتک';
 function syncEmojiBtn(){const b=$('#emojiBtn');if(b)b.classList.toggle('on',pickerOpen)}
@@ -1658,7 +1851,7 @@ const grid=$('#emGrid',slot);
 const paint=list=>{grid.innerHTML=list.map(e=>`<button class="ebtn" data-em="${e}">${e}</button>`).join('')};
 const showCat=c=>{pickerCat=c;$$('.pcat',slot).forEach(b=>b.classList.toggle('on',b.dataset.cat===c));
 grid.classList.toggle('big',c==='__sticker');
-if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','','😂']);else paint(EMO[c])};
+if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','🔥','😂']);else paint(EMO[c])};
 showCat(recents.length?'__recent':cats[0]);
 $$('.pcat',slot).forEach(b=>b.onclick=()=>showCat(b.dataset.cat));
 $('#emSearch',slot).oninput=e=>{const q=e.target.value.trim();grid.classList.remove('big');
@@ -1708,7 +1901,8 @@ let i=0;
 const ov=document.createElement('div');ov.className='story-view';$('#layer').appendChild(ov);
 function show(){
 const s=list[i];
-if(s.userId!==S.me&&!(s.views||[]).includes(S.me)){(s.views=s.views||[]).push(S.me);DB.save()}
+if(s.userId!==S.me&&!(s.views||[]).includes(S.me)){(s.views=s.views||[]).push(S.me);DB.save();
+if(RTDB&&FB_OK&&!s.demo)R('stories/'+s.id+'/views/'+S.me).set(true)}
 const u=S.users[s.userId]||me();
 ov.innerHTML=`<div class="sv-inner">
 <div class="sv-prog">${list.map((_,k)=>`<span class="sp ${k<i?'done':''} ${k===i?'run':''}"><i></i></span>`).join('')}</div>
@@ -1727,6 +1921,7 @@ if(runSp)runSp.addEventListener('animationend',e=>{if(e.target.tagName==='I')nex
 else setTimeout(next,5000);
 $('[data-sx]',ov).onclick=close;
 const d=$('[data-sdel]',ov);if(d)d.onclick=()=>{S.stories=S.stories.filter(x=>x.id!==s.id);DB.save();
+if(RTDB&&FB_OK&&!s.demo)R('stories/'+s.id).remove();
 if(!activeStories(uidv).length){close();toast('استوری حذف شد')}else{list.splice(i,1);if(i>=list.length)i=list.length-1;show();renderList()}};
 $('[data-zn]',ov).onclick=next;$('[data-zp]',ov).onclick=prev;
 }
@@ -1748,9 +1943,9 @@ case 'do-login':login();break;
 case 'auth-mode':setAuthMode(t.dataset.m);break;
 case 'pass-eye':{const pi=$('#'+t.dataset.t);if(!pi)break;const shw=pi.type==='password';pi.type=shw?'text':'password';t.innerHTML=shw?ICO.eyeOff:ICO.eye;break}
 case 'pick-col':authAv={col:AVCOLS[+t.dataset.i],src:null};renderAuthAvatars();break;
-case 'logo':state.section='chats';state.chatId=null;renderAll();break;
+case 'logo':state.section='chats';state.chatId=null;unsubscribeMessages();renderAll();break;
 case 'nav':state.section=t.dataset.k;if(t.dataset.k==='search')state.focusSearch=true;
-renderRail();renderList();break;
+if(t.dataset.k!=='chats'||state.chatId){} renderRail();renderList();break;
 case 'settings-go':state.settingsPage=t.dataset.k;renderList();break;
 case 'settings-back':state.settingsPage='main';renderList();break;
 case 'toggle-theme':setTheme(S.settings.theme==='dark'?'light':'dark');break;
@@ -1779,7 +1974,10 @@ case 'member-menu':closeMenu();memberMenu(state.chatId,t.dataset.id,t);break;
 case 'react-menu':closeMenu();reactMenu(t.dataset.mid,t);break;
 case 'react':{const m=findMsg(t.dataset.mid);if(!m)break;const e=t.dataset.e;m.reactions=m.reactions||{};
 const arr=m.reactions[e]||[];const i=arr.indexOf(S.me);i>=0?arr.splice(i,1):arr.push(S.me);
-if(!arr.length)delete m.reactions[e];else m.reactions[e]=arr;DB.save();renderMessages();closeMenu();break}
+if(!arr.length)delete m.reactions[e];else m.reactions[e]=arr;DB.save();
+const cc=msgChat(t.dataset.mid);
+if(cc&&RTDB&&FB_OK&&!cc.id.startsWith('saved_'))R('messages/'+cc.id+'/'+m.id+'/reactions').set(wireMsg(m).reactions);
+renderMessages();closeMenu();break}
 case 'reply':state.replyTo=t.dataset.mid;state.editId=null;renderComposerBanner();closeMenu();$('#cin')&&$('#cin').focus();break;
 case 'cancel-reply':state.replyTo=null;renderComposerBanner();break;
 case 'edit-msg':{const m=findMsg(t.dataset.mid);state.editId=m.id;state.replyTo=null;renderComposerBanner();closeMenu();
@@ -1789,18 +1987,25 @@ case 'copy-msg':{const m=findMsg(t.dataset.mid);copyText(m?(m.text||''):'');clos
 case 'forward':closeMenu();forwardModal([t.dataset.mid]);break;
 case 'pin-msg':{const cc=msgChat(t.dataset.mid);cc.pinnedIds=cc.pinnedIds||[];const i2=cc.pinnedIds.indexOf(t.dataset.mid);
 i2>=0?cc.pinnedIds.splice(i2,1):(cc.pinnedIds.length>=5?cc.pinnedIds.shift():cc.pinnedIds.push(t.dataset.mid));
-DB.save();closeMenu();renderChat();toast(i2>=0?'سنجاق برداشته شد':'پیام سنجاق شد 📌');break}
-case 'unpin':{const cc2=chatById(state.chatId);cc2.pinnedIds=(cc2.pinnedIds||[]).filter(x=>x!==t.dataset.mid);DB.save();renderChat();break}
+DB.save();if(RTDB&&FB_OK&&!cc.id.startsWith('saved_'))R('chats/'+cc.id+'/pinnedIds').set(cc.pinnedIds);
+closeMenu();renderChat();toast(i2>=0?'سنجاق برداشته شد':'پیام سنجاق شد 📌');break}
+case 'unpin':{const cc2=chatById(state.chatId);cc2.pinnedIds=(cc2.pinnedIds||[]).filter(x=>x!==t.dataset.mid);DB.save();
+if(RTDB&&FB_OK&&!cc2.id.startsWith('saved_'))R('chats/'+cc2.id+'/pinnedIds').set(cc2.pinnedIds);renderChat();break}
 case 'delete-msg':closeMenu();{const mm=findMsg(t.dataset.mid);const ccc=msgChat(t.dataset.mid);
 if(!isMine(mm)&&!isAdmin(ccc))return toast('اجازه حذف این پیام را ندارید','err');
-confirmBox('حذف پیام','این پیام برای همیشه حذف شود؟',()=>{ccc.messages=ccc.messages.filter(x=>x.id!==t.dataset.mid);DB.save();renderMessages();renderList();renderInfo()},'حذف');break}
+confirmBox('حذف پیام','این پیام برای همیشه حذف شود؟',()=>{ccc.messages=ccc.messages.filter(x=>x.id!==t.dataset.mid);DB.save();
+if(RTDB&&FB_OK&&!ccc.id.startsWith('saved_'))R('messages/'+ccc.id+'/'+t.dataset.mid).remove();
+renderMessages();renderList();renderInfo()},'حذف');break}
 case 'select-mode':state.selectMode=true;state.selected.add(t.dataset.mid);closeMenu();renderMessages();renderSelectBar();break;
 case 'bubble':if(state.selectMode){state.selected.has(t.dataset.mid)?state.selected.delete(t.dataset.mid):state.selected.add(t.dataset.mid);
 t.closest('.mrow').classList.toggle('sel',state.selected.has(t.dataset.mid));renderSelectBar()}break;
 case 'sel-all':{const cc3=chatById(state.chatId);if(state.selected.size===cc3.messages.length){state.selected.clear()}else cc3.messages.forEach(m=>m.type!=='system'&&state.selected.add(m.id));renderMessages();renderSelectBar();break}
 case 'sel-fwd':forwardModal([...state.selected]);break;
 case 'sel-del':confirmBox('حذف پیام‌ها',fa(state.selected.size)+' پیام حذف شود؟',()=>{const cc4=chatById(state.chatId);
-cc4.messages=cc4.messages.filter(m=>!state.selected.has(m.id));state.selected.clear();state.selectMode=false;DB.save();renderChat();renderList()},'حذف');break;
+const ids=[...state.selected];
+cc4.messages=cc4.messages.filter(m=>!state.selected.has(m.id));state.selected.clear();state.selectMode=false;DB.save();
+if(RTDB&&FB_OK&&!cc4.id.startsWith('saved_'))ids.forEach(mid=>R('messages/'+cc4.id+'/'+mid).remove());
+renderChat();renderList()},'حذف');break;
 case 'sel-cancel':state.selectMode=false;state.selected.clear();renderMessages();renderSelectBar();break;
 case 'send-or-rec':case 'start-rec':startRec();break;
 case 'stop-rec':stopRec(false);break;
@@ -1828,8 +2033,14 @@ case 'vote':{const m=findMsg(t.dataset.mid);if(!m)break;const p=m.poll;if(p.clos
 const has=p.opts[i3].v.includes(S.me);
 if(!p.multi)p.opts.forEach(o=>o.v=o.v.filter(x=>x!==S.me));
 has?p.opts[i3].v=p.opts[i3].v.filter(x=>x!==S.me):p.opts[i3].v.push(S.me);
-DB.save();renderMessages();break}
-case 'close-poll':{const m2=findMsg(t.dataset.mid);m2.poll.closed=true;DB.save();renderMessages();toast('رأی‌گیری پایان یافت');break}
+DB.save();
+const ccv=msgChat(t.dataset.mid);
+if(ccv&&RTDB&&FB_OK&&!ccv.id.startsWith('saved_'))R('messages/'+ccv.id+'/'+m.id+'/poll').set(wireMsg(m).poll);
+renderMessages();break}
+case 'close-poll':{const m2=findMsg(t.dataset.mid);m2.poll.closed=true;DB.save();
+const ccp=msgChat(t.dataset.mid);
+if(ccp&&RTDB&&FB_OK&&!ccp.id.startsWith('saved_'))R('messages/'+ccp.id+'/'+m2.id+'/poll/closed').set(true);
+renderMessages();toast('رأی‌گیری پایان یافت');break}
 case 'jump-msg':{closeMenu();const cid=t.dataset.id,mid=t.dataset.mid;
 if(state.chatId!==cid){openChat(cid);setTimeout(()=>jumpTo(mid),260)}else jumpTo(mid);break}
 case 'chat-search':closeMenu();chatSearch(t.dataset.id||state.chatId);break;
@@ -1839,37 +2050,58 @@ case 'archive-chat':case 'unarchive-chat':{const cc7=chatById(t.dataset.id||stat
 if(state.chatId===cc7.id)closeChat();else renderAll();toast(cc7.archived?'به آرشیو منتقل شد':'از آرشیو خارج شد');break}
 case 'mark-unread':{const cc8=chatById(t.dataset.id||state.chatId);cc8.unread=(cc8.unread||0)+1;DB.save();closeMenu();renderAll();break}
 case 'clear-history':closeMenu();confirmBox('پاک کردن تاریخچه','همه پیام‌های این گفتگو حذف شود؟ این عمل قابل بازگشت نیست.',()=>{
-const cc9=chatById(t.dataset.id||state.chatId);cc9.messages=[];cc9.pinnedIds=[];DB.save();renderChat();renderList();renderInfo();toast('تاریخچه پاک شد')},'پاک کردن');break;
+const cc9=chatById(t.dataset.id||state.chatId);cc9.messages=[];cc9.pinnedIds=[];cc9.lastMsg=null;DB.save();
+if(RTDB&&FB_OK&&!cc9.id.startsWith('saved_')){R('messages/'+cc9.id).remove();R('chats/'+cc9.id+'/lastMsg').remove()}
+renderChat();renderList();renderInfo();toast('تاریخچه پاک شد')},'پاک کردن');break;
 case 'leave-chat':closeMenu();{const cc10=chatById(t.dataset.id||state.chatId);const own=isOwner(cc10);
 confirmBox(own?'حذف گفتگو':'خروج از گفتگو',own?'این گفتگو و همه پیام‌هایش حذف می‌شود.':'از این گفتگو خارج می‌شوید و از لیست حذف می‌شود.',()=>{
 if(!own&&(cc10.type==='group'||cc10.type==='channel'))pushSystem(cc10.id,me().name+' از گفتگو خارج شد');
+if(RTDB&&FB_OK&&!cc10.id.startsWith('saved_')){
+if(own){R('chats/'+cc10.id).remove();R('messages/'+cc10.id).remove()}
+else R('chats/'+cc10.id+'/members/'+S.me).remove();
+}
 delete S.chats[cc10.id];DB.save();closeChat();renderAll();toast('انجام شد')},own?'حذف':'خروج');break}
 case 'block-user':{const u=S.users[t.dataset.id];if(!u)break;u.blocked=!u.blocked;u.contact=u.blocked?false:u.contact;DB.save();closeMenu();closeModal();renderAll();toast(u.blocked?'کاربر مسدود شد':'مسدودی رفع شد');break}
 case 'edit-me':editMeModal();break;
 case 'edit-chat':closeMenu();editChatModal(t.dataset.id||state.chatId);break;
 case 'copy-un':copyText('@'+me().username);break;
 case 'copy-invite':{const cc11=chatById(t.dataset.id||state.chatId);
-if(!cc11.invite)cc11.invite=uid('inv').slice(-8);DB.save();closeMenu();
-copyText('nexo.app/join/'+cc11.invite);break}
+if(!cc11.invite)cc11.invite=uid('inv').slice(-8);DB.save();
+if(RTDB&&FB_OK&&!cc11.id.startsWith('saved_'))R('chats/'+cc11.id+'/invite').set(cc11.invite);
+closeMenu();copyText('nexo.app/join/'+cc11.invite);break}
 case 'add-member':closeMenu();addMemberModal(state.chatId);break;
 case 'add-member-do':{const cc12=chatById(t.dataset.cid);const idu=t.dataset.id;
 if(cc12.members[idu])return closeMenu();
 cc12.members[idu]={role:'member',joined:Date.now()};if(S.users[idu])S.users[idu].contact=true;
-pushSystem(cc12.id,S.users[idu].name+' به '+(cc12.type==='channel'?'کانال':'گروه')+' اضافه شد');
+if(RTDB&&FB_OK)R('chats/'+t.dataset.cid+'/members/'+idu).set({role:'member',joined:Date.now()});
+pushSystem(cc12.id,S.users[idu]?S.users[idu].name+' به '+(cc12.type==='channel'?'کانال':'گروه')+' اضافه شد':'کاربر اضافه شد');
 DB.save();closeMenu();closeModal();renderAll();toast('عضو اضافه شد ✅');break}
 case 'promote':{const cc13=chatById(state.chatId);const idu2=t.dataset.id;
-cc13.members[idu2].role=cc13.members[idu2].role==='admin'?'member':'admin';DB.save();closeMenu();renderAll();toast('نقش کاربر به‌روزرسانی شد');break}
+cc13.members[idu2].role=cc13.members[idu2].role==='admin'?'member':'admin';DB.save();
+if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu2+'/role').set(cc13.members[idu2].role);
+closeMenu();renderAll();toast('نقش کاربر به‌روزرسانی شد');break}
 case 'restrict':{const cc14=chatById(state.chatId);const idu3=t.dataset.id;const m3=cc14.members[idu3];
-if(m3.restricted&&m3.restricted>Date.now()){delete m3.restricted;toast('محدودیت برداشته شد')}
-else{m3.restricted=Date.now()+24*36e5;toast('ارسال پیام تا ۲۴ ساعت محدود شد')}
+if(m3.restricted&&m3.restricted>Date.now()){delete m3.restricted;toast('محدودیت برداشته شد');
+if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu3+'/restricted').remove()}
+else{m3.restricted=Date.now()+24*36e5;toast('ارسال پیام تا ۲۴ ساعت محدود شد');
+if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu3+'/restricted').set(m3.restricted)}
 DB.save();closeMenu();renderAll();break}
 case 'kick':{const cc15=chatById(state.chatId);const idu4=t.dataset.id;
-confirmBox('حذف عضو','این کاربر از گفتگو حذف شود؟',()=>{delete cc15.members[idu4];pushSystem(cc15.id,(S.users[idu4]?S.users[idu4].name:'کاربر')+' حذف شد');DB.save();renderAll();toast('حذف شد')},'حذف');closeMenu();break}
+confirmBox('حذف عضو','این کاربر از گفتگو حذف شود؟',()=>{delete cc15.members[idu4];
+if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu4).remove();
+pushSystem(cc15.id,(S.users[idu4]?S.users[idu4].name:'کاربر')+' حذف شد');DB.save();renderAll();toast('حذف شد')},'حذف');closeMenu();break}
 case 'perm':{const cc16=chatById(state.chatId);const k=t.dataset.k;cc16.permissions=cc16.permissions||{};
-cc16.permissions[k]=cc16.permissions[k]===false?true:false;DB.save();renderInfo();renderChat();break}
+cc16.permissions[k]=cc16.permissions[k]===false?true:false;DB.save();
+if(RTDB&&FB_OK)R('chats/'+state.chatId+'/permissions/'+k).set(cc16.permissions[k]);
+renderInfo();renderChat();break}
 case 'call':toast(t.dataset.kind==='video'?'تماس تصویری به‌زودی فعال می‌شود':'تماس صوتی به‌زودی فعال می‌شود');closeMenu();break;
-case 'switch-account':confirmBox('خروج از حساب','با خروج، پروفایل شما از این دستگاه خارج می‌شود (داده‌ها حفظ می‌شود).',()=>{S.me=null;DB.save();location.reload()},'خروج');break;
-case 'delete-account':confirmBox('حذف حساب','همه داده‌های Nexo در این مرورگر برای همیشه حذف می‌شود.',()=>{localStorage.removeItem(KEY);location.reload()},'حذف دائمی');break;
+case 'switch-account':confirmBox('خروج از حساب','با خروج، پروفایل شما از این دستگاه خارج می‌شود (حساب و پیام‌ها در دیتابیس دست‌نخورده می‌مانند).',()=>{
+if(RTDB&&S.me)R('users/'+S.me+'/online').set(false);
+S.me=null;DB.save();location.reload()},'خروج');break;
+case 'delete-account':confirmBox('حذف حساب','حساب شما از دیتابیس و این دستگاه برای همیشه حذف می‌شود.',()=>{
+const u=me();
+if(u&&RTDB){R('users/'+S.me).remove();R('usernames/'+u.username).remove()}
+localStorage.removeItem(KEY);location.reload()},'حذف دائمی');break;
 case 'ask-notif':if(!('Notification' in window))return toast('مرورگر شما پشتیبانی نمی‌کند','err');
 Notification.requestPermission().then(p=>{S.settings.desktop=p==='granted';DB.save();renderList();toast(p==='granted'?'اعلان دسکتاپ فعال شد ✅':'اجازه داده نشد',p!=='granted'?'err':'')});break;
 case 'show-blocked':showBlocked();break;
@@ -1880,12 +2112,12 @@ const an=document.createElement('a');an.href=URL.createObjectURL(blob);an.downlo
 case 'clear-cache':{let n=0;Object.values(S.chats).forEach(cc=>cc.messages.forEach(m=>{if(m.type==='image'&&m.media&&m.media.src.length>4e5){m.media.src='';n++}}));
 DB.save();renderMessages();toast(n?'حافظه پنهان رسانه پاک شد':'مورد سنگینی برای پاک کردن نبود');break}
 case 'dev-data':devData();break;
-case 'reset-all':confirmBox('بازنشانی','همه گفتگوها و کاربران پاک شوند؟',()=>{
-S.chats={};S.chats['saved_'+S.me]={id:'saved_'+S.me,type:'saved',messages:[],unread:0,createdAt:Date.now()};S.folders=[];S.stories=[];DB.save();renderAll();toast('بازنشانی انجام شد')},'بازنشانی');break;
+case 'reset-all':confirmBox('بازنشانی','همه گفتگوها و کاربران محلی پاک شوند؟ (حساب دیتابیسی شما حذف نمی‌شود)',()=>{
+S.chats={};S.chats['saved_'+S.me]={id:'saved_'+S.me,type:'saved',messages:[],unread:0,createdAt:Date.now()};S.folders=[];S.stories=S.stories.filter(x=>!x.demo);DB.save();renderAll();toast('بازنشانی انجام شد')},'بازنشانی');break;
 case 'about-info':modal({title:'درباره Nexo',icon:ICO.info,body:`<div style="text-align:center;padding:8px"><div style="width:78px;margin:0 auto 12px">${LOGO}</div>
-<h2 class="gold-t" style="margin:0 0 4px;font-size:30px">NEXO</h2><p style="color:var(--txt2);margin:0 0 16px">نسخه ${fa('1.1.0')}</p>
+<h2 class="gold-t" style="margin:0 0 4px;font-size:30px">NEXO</h2><p style="color:var(--txt2);margin:0 0 16px">نسخه ${fa('1.2.0')} — متصل به Firebase Realtime Database</p>
 <p style="font-size:13.5px;line-height:2;color:var(--txt2)">Nexo یک پیام‌رسان سریع، امن و کاملاً شخصی‌سازی‌شده است؛ با گفتگوی خصوصی، گروه‌های مدیریتی، کانال‌های عمومی، استوری ۲۴ ساعته، نظرسنجی، پیام صوتی، پوشه‌بندی چت و دو تم مشکی‌طلایی و سفید‌طلایی.</p></div>`});break;
-case 'about-feat':modal({title:'قابلیت‌های Nexo',icon:ICO.star,body:['گفتگوی خصوصی با یوزرنیم (بدون شماره)','گروه با مدیر، دسترسی و محدودسازی','کانال عمومی و خصوصی با لینک دعوت','جستجوی کاربر/گروه/کانال با @ یا بدون @','استوری تصویری و متنی ۲۴ ساعته با بازدید','پیام صوتی، عکس، ویدیو، فایل، موقعیت و کارت تماس','نظرسنجی تک و چندانتخابی','واکنش، پاسخ، ویرایش، حذف، سنجاق و فوروارد','پوشه‌های چت، آرشیو، بی‌صدا کردن','جستجوی متن پیام‌ها','دو تم مشکی‌طلایی و سفید‌طلایی','استیکر و ایموجی کامل با جستجو و دکمه بستن','رسید خواندن و وضعیت آنلاین'].map(x=>`<div class="mrow" style="cursor:default"><span style="color:var(--gold)">${ICO.check}</span><div class="rc"><div class="rn" style="font-size:13.5px;font-weight:600">${x}</div></div></div>`).join('')});break;
+case 'about-feat':modal({title:'قابلیت‌های Nexo',icon:ICO.star,body:['ثبت‌نام و ورود با یوزرنیم + رمز عبور روی دیتابیس ابری','جلوگیری از ساخت یوزرنیم تکراری در دیتابیس','جستجوی واقعی کاربران با یوزرنیم (با @ یا بدون @)','گفتگوی خصوصی زنده با تیک ارسال/خوانده‌شدن','گروه با مدیر، دسترسی و محدودسازی','کانال عمومی و خصوصی با لینک دعوت','استوری تصویری و متنی ۲۴ ساعته با بازدید','نمایش عکس پروفایل برای همه‌ی کسانی که یوزرنیم را دارند','پیام صوتی، عکس، ویدیو، فایل، موقعیت و کارت تماس','نظرسنجی تک و چندانتخابی','واکنش، پاسخ، ویرایش، حذف، سنجاق و فوروارد','وضعیت آنلاین / آخرین بازدید زنده','نشانگر وضعیت اتصال به دیتابیس','پوشه‌های چت، آرشیو، بی‌صدا کردن','دو تم مشکی‌طلایی و سفید‌طلایی'].map(x=>`<div class="mrow" style="cursor:default"><span style="color:var(--gold)">${ICO.check}</span><div class="rc"><div class="rn" style="font-size:13.5px;font-weight:600">${x}</div></div></div>`).join('')});break;
 case 'close-modal':closeModal();break;
 }
 });
@@ -1937,20 +2169,20 @@ modal({title:'مصرف حافظه',icon:ICO.db,body:`
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
 ${[['حجم داده‌های محلی',fSize(size)],['تعداد پیام‌ها',fa(msgs)],['رسانه‌های ذخیره‌شده',fa(media)],['گفتگوها',fa(Object.keys(S.chats).length)]]
 .map(([t,v])=>`<div style="background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:16px;text-align:center"><div class="gold-t" style="font-size:20px;font-weight:800">${v}</div><div style="font-size:12px;color:var(--txt2);margin-top:4px">${t}</div></div>`).join('')}
-</div><div class="note" style="margin-top:14px">داده‌ها روی حافظه محلی مرورگر نگه داشته می‌شوند تا اتصال پایگاه‌داده ابری فعال شود.</div>`});
+</div><div class="note" style="margin-top:14px">پیام‌ها، کاربران و استوری‌ها روی دیتابیس ابری Firebase نگه داشته می‌شوند؛ این حافظه فقط کش دستگاه شماست.</div>`});
 }
 function devData(){
 const exists=Object.values(S.users).some(u=>u.demo);
-if(exists){confirmBox('حذف داده آزمایشی','کاربران و استوری‌های نمونه حذف شوند؟',()=>{
+if(exists){confirmBox('حذف داده آزمایشی','کاربران و استوری‌های نمونه (فقط محلی) حذف شوند؟',()=>{
 Object.values(S.users).filter(u=>u.demo).forEach(u=>{delete S.users[u.id];
 S.stories=S.stories.filter(s=>s.userId!==u.id);
 Object.values(S.chats).forEach(c=>{if(c.type==='private'&&c.peerId===u.id)delete S.chats[c.id]})});
 DB.save();renderAll();toast('داده‌های آزمایشی حذف شد')},'حذف',true);return}
-const samples=[['آرش محمدی','arash_dev'],['سارا کریمی','sara.k'],['نیما رضایی','nima_nexo'],['الناز حسینی','elnaz_h'],['پارسا','parsa_tech']];
+const samples=[['آرش محمدی','arash_dev'],['سارا کریمی','sara_k'],['نیما رضایی','nima_nexo'],['الناز حسینی','elnaz_h'],['پارسا','parsa_tech']];
 const ids=[];
-samples.forEach(([n,u],i)=>{const id=uid('u');ids.push(id);S.users[id]={id,name:n,username:u,bio:'کاربر Nexo',avatar:{col:AVCOLS[i%AVCOLS.length]},createdAt:Date.now(),lastSeen:Date.now()-Math.random()*8e7,online:Math.random()>.6,contact:false,blocked:false,demo:true}});
-S.stories.push({id:uid('s'),userId:ids[0],type:'text',text:'سلام! این یک استوری نمونه است ✨',bg:SBGS[0],createdAt:Date.now()-36e5,views:[]});
-DB.save();renderAll();toast('۵ کاربر نمونه + ۱ استوری آزمایشی اضافه شد');
+samples.forEach(([n,u],i)=>{const id=uid('u');ids.push(id);S.users[id]={id,name:n,username:u,bio:'کاربر آزمایشی (فقط محلی)',avatar:{col:AVCOLS[i%AVCOLS.length]},createdAt:Date.now(),lastSeen:Date.now()-Math.random()*8e7,online:Math.random()>.6,contact:false,blocked:false,demo:true}});
+S.stories.push({id:uid('s'),userId:ids[0],type:'text',text:'سلام! این یک استوری نمونه است ✨',bg:SBGS[0],createdAt:Date.now()-36e5,views:[],demo:true});
+DB.save();renderAll();toast('۵ کاربر نمونه + ۱ استوری آزمایشی (فقط روی همین دستگاه) اضافه شد');
 }
 function newFolderModal(){
 const chats=Object.values(S.chats);
@@ -1995,123 +2227,4 @@ ${st.length?`<button class="iact" data-act="view-story" data-id="${u.id}">${ICO.
 <button class="iact" id="cpUn">${ICO.at}کپی یوزرنیم</button>
 <button class="iact" data-act="block-user" data-id="${u.id}" style="color:var(--danger)">${ICO.ban}${u.blocked?'رفع مسدودی':'مسدود'}</button></div>
 ${u.contact?'':`<div class="irow" id="addCt"><span class="ic">${ICO.users}</span><div class="rc"><div class="rl">افزودن به مخاطبین</div></div></div>`}
-${common.length?`<div class="sec-title">گفتگوهای مشترک</div>`+common.map(c=>`<div class="irow" data-act="open-chat" data-id="${c.id}"><span class="ic">${ICO.group}</span><div class="rc"><div class="rl">${esc(c.title)}</div><div class="rs">${chatSub(c)}</div></div></div>`).join(''):''}`,
-onMount:ov=>{$('#cpUn',ov).onclick=()=>copyText('@'+u.username);
-const ac=$('#addCt',ov);if(ac)ac.onclick=()=>{u.contact=true;DB.save();closeModal(ov);renderAll();toast(u.name+' به مخاطبین اضافه شد ✅')}}});
-}
-async function lookupUsername(raw){
-const n=norm(raw);if(!n)return;
-toast('در حال جستجوی @'+n+'…');
-const c=Object.values(S.chats).find(x=>x.username&&norm(x.username)===n);
-if(c){openChat(c.id);return}
-const u=await Backend.getUserByUsername(n);
-if(u){openUserProfile(u.id);return}
-const res=await Backend.searchUsers(n);
-if(res.length){state.section='search';state.listQuery=n;renderRail();renderList();return}
-modal({title:'یافت نشد',icon:ICO.search,body:`<div style="text-align:center;padding:14px">
-<div style="width:70px;margin:0 auto 12px;color:var(--gold)">${ICO.search}</div>
-<h3 style="margin:0 0 6px">@${esc(n)}</h3>
-<p style="color:var(--txt2);font-size:13.5px;margin:0 0 16px">کاربر، گروه یا کانالی با این یوزرنیم در پایگاه‌داده محلی پیدا نشد.</p>
-<div class="note">با اتصال پایگاه‌داده ابری، همه کاربران Nexo از طریق یوزرنیم (با @ یا بدون @) قابل جستجو خواهند بود.</div>
-<button class="btn btn-gold btn-sm" id="mkDemo" style="margin-top:14px">ساخت پروفایل محلی با این یوزرنیم</button></div>`,
-onMount:ov=>{$('#mkDemo',ov).onclick=()=>{const id=uid('u');
-S.users[id]={id,name:n.replace(/[._]/g,' ').replace(/\b\w/g,x=>x.toUpperCase()),username:n,bio:'',avatar:{col:AVCOLS[Math.floor(Math.random()*AVCOLS.length)]},createdAt:Date.now(),lastSeen:Date.now(),online:false,contact:true,blocked:false};
-DB.save();closeModal(ov);startPrivateChat(id)}}});
-}
-function chatSearch(id){
-const c=chatById(id);if(!c)return;
-modal({title:'جستجو در گفتگو',icon:ICO.search,
-body:`<div class="search-box">${ICO.search}<input id="csQ" placeholder="متن پیام…" autofocus></div><div id="csRes" style="margin-top:10px;max-height:340px;overflow-y:auto"></div>`,
-onMount:ov=>{const q=$('#csQ',ov),r=$('#csRes',ov);
-q.oninput=()=>{const v=q.value.trim().toLowerCase();if(!v){r.innerHTML='';return}
-const arr=c.messages.filter(m=>(m.text||'').toLowerCase().includes(v));
-r.innerHTML=arr.length?arr.slice().reverse().map(m=>`<div class="irow" data-act="jump-msg" data-id="${c.id}" data-mid="${m.id}"><span class="ic">${ICO.search}</span><div class="rc"><div class="rl" style="font-size:13.5px">${esc((m.text||'رسانه').slice(0,60))}</div><div class="rs">${(S.users[m.senderId]?S.users[m.senderId].name:'')+' • '+listTime(m.createdAt)}</div></div></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px">نتیجه‌ای نبود</p>`};
-q.focus()}});
-}
-function sendLocation(){
-const c=chatById(state.chatId);if(!c)return;
-if(!navigator.geolocation)return toast('موقعیت در دسترس نیست','err');
-toast('در حال دریافت موقعیت…');
-navigator.geolocation.getCurrentPosition(p=>{pushMsg(c,{type:'location',loc:{lat:p.coords.latitude,lng:p.coords.longitude}});renderList()},
-()=>toast('دسترسی به موقعیت داده نشد','err'));
-}
-function sendMyContact(){
-const c=chatById(state.chatId);const u=me();if(!c)return;
-pushMsg(c,{type:'contact',ct:{userId:u.id,name:u.name,username:u.username,avatar:u.avatar}});renderList();
-}
-let audioEl=null;
-function playVoice(mid,btn){
-const m=findMsg(mid);if(!m||!m.media||!m.media.src)return toast('فایل صوتی در دسترس نیست','err');
-if(audioEl){audioEl.pause();audioEl=null;$$('.vplay').forEach(b=>b.innerHTML=ICO.play)}
-audioEl=new Audio(m.media.src);audioEl.play().catch(()=>toast('پخش صوت ممکن نشد','err'));
-btn.innerHTML=ICO.stop;
-const wave=$(`[data-wave="${mid}"]`);const bars=wave?$$('i',wave):[];let idx=0,timer=null;
-timer=setInterval(()=>{bars.forEach((b,i)=>b.classList.toggle('a',i<=idx));idx++;if(idx>bars.length)idx=0},Math.max(60,(m.media.dur||1)*1000/bars.length));
-audioEl.onended=()=>{clearInterval(timer);btn.innerHTML=ICO.play;bars.forEach(b=>b.classList.remove('a'));audioEl=null};
-}
-/* ---------- Context menu / long press ---------- */
-document.addEventListener('contextmenu',e=>{
-const mi=e.target.closest('[data-cid]');const mb=e.target.closest('[data-mid].mrow');
-const rect=()=>({getBoundingClientRect:()=>({left:e.clientX,top:e.clientY,right:e.clientX,bottom:e.clientY,width:0,height:0})});
-if(mi){e.preventDefault();chatMenu(mi.dataset.cid,rect());return}
-if(mb){e.preventDefault();msgMenu(mb.dataset.mid,rect());return}
-if(state.section==='chats'){const it=e.target.closest('.item');if(it&&it.dataset.id){e.preventDefault();
-menuAt(null,`<button class="mi" data-act="open-info" data-id="${it.dataset.id}">${ICO.info} اطلاعات</button><button class="mi" id="fadd">${ICO.folder} افزودن به پوشه</button>`,{x:e.clientX,y:e.clientY});
-const fm=$('#fadd',curMenu);if(fm)fm.onclick=()=>addToFolderMenu(it.dataset.id,fm)}}
-});
-function attachLongPress(){
-let tmr=null,sx=0,sy=0;
-$$('.item[data-cid],.mrow[data-mid]').forEach(node=>{
-node.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;sx=e.clientX;sy=e.clientY;
-tmr=setTimeout(()=>{const mid=node.dataset.mid,cid=node.dataset.cid;
-if(mid)msgMenu(mid,node);else if(cid)chatMenu(cid,node);
-navigator.vibrate&&navigator.vibrate(20)},520)});
-['pointerup','pointercancel','pointermove'].forEach(ev=>node.addEventListener(ev,e=>{
-if(ev==='pointermove'&&Math.hypot(e.clientX-sx,e.clientY-sy)>12)clearTimeout(tmr);else clearTimeout(tmr)}));
-});
-$$('.mem[data-id]').forEach(node=>node.addEventListener('contextmenu',e=>{e.preventDefault();memberMenu(state.chatId,node.dataset.id,node)}));
-}
-document.addEventListener('dblclick',e=>{
-const b=e.target.closest('.bub');if(b&&canPost(chatById(state.chatId))){state.replyTo=b.dataset.mid;renderComposerBanner();$('#cin')&&$('#cin').focus()}
-const t=e.target.closest('.btxt');
-if(t&&/^(\p{Extended_Pictographic}|\s|️){1,6}$/u.test(t.textContent.trim())){const mid=t.closest('.mrow').dataset.mid;const m=findMsg(mid);m.reactions=m.reactions||{};(m.reactions['❤️']=m.reactions['❤️']||[]).includes(S.me)?m.reactions['❤️']=m.reactions['❤️'].filter(x=>x!==S.me):m.reactions['❤️'].push(S.me);DB.save();renderMessages()}
-});
-/* ---------- Keyboard ---------- */
-document.addEventListener('keydown',e=>{
-if($('.story-view')){
-if(e.key==='Escape')svCtl&&svCtl.close();
-if(e.key==='ArrowLeft')svCtl&&svCtl.next();
-if(e.key==='ArrowRight')svCtl&&svCtl.prev();
-return}
-if(e.key==='Escape'){
-if(pickerOpen){togglePicker(false);return}
-if(curMenu)return closeMenu();
-if(openModals.length)return closeModal();
-if(state.infoOpen){state.infoOpen=false;return renderInfo()}
-if(state.selectMode){state.selectMode=false;state.selected.clear();renderMessages();return renderSelectBar()}}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();state.section='search';state.focusSearch=true;renderRail();renderList()}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'&&state.chatId){e.preventDefault();chatSearch(state.chatId)}
-if(e.key==='ArrowUp'&&!e.ctrlKey){const ta=$('#cin');if(ta&&!ta.value&&state.chatId){const c=chatById(state.chatId);
-for(let i=c.messages.length-1;i>=0;i--){if(isMine(c.messages[i])&&c.messages[i].type==='text'){state.editId=c.messages[i].id;ta.value=c.messages[i].text;renderComposerBanner();ta.focus();e.preventDefault();break}}}}
-});
-window.addEventListener('resize',()=>{const mb=$('.mob-back');if(mb)mb.style.display=window.innerWidth<=1024?'grid':'none'});
-/* ---------- File inputs ---------- */
-$('#fileImg').addEventListener('change',e=>{if(e.target.files[0])handleImage(e.target.files[0]);e.target.value=''});
-$('#fileVid').addEventListener('change',e=>{const f=e.target.files[0];if(f)f.size>8*1024*1024?toast('ویدیو برای ذخیره محلی بزرگ است (حداکثر ۸ مگابایت)','err'):handleFile(f);e.target.value=''});
-$('#fileAny').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);e.target.value=''});
-$('#avFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);authAv={src:d.src};renderAuthAvatars()});
-/* ---------- Init ---------- */
-(function init(){
-renderAuthAvatars();
-$('#inUser').addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')});
-$('#inName').addEventListener('input',renderAuthAvatars);
-$('#inUser').addEventListener('keydown',e=>{if(e.key==='Enter')signup()});
-$('#lgUser').addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')});
-$('#lgUser').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=$('#lgPass');if(p)p.focus()}});
-$('#lgPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
-if(S.me&&S.users[S.me]){enterApp()}
-else{$('#auth').classList.remove('hidden');setAuthMode(Object.values(S.users).some(u=>u.pass)?'login':'signup')}
-})();
-</script>
-</body>
-</html>
+${common.length?`<div class="sec-title">گفتگوهای مشترک
