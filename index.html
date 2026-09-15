@@ -515,7 +515,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>
 ورود به حساب
 </button>
-<div class="note db-note" style="margin-top:14px;text-align:center">حساب‌ها فعلاً فقط روی همین دستگاه ذخیره می‌شوند؛ پس از اتصال پایگاه‌داده ابری، از هر دستگاهی با یوزرنیم و رمز خود وارد شوید و همه پیام‌هایتان بالا می‌آید.</div>
+<div class="note db-note" style="margin-top:14px;text-align:center">حساب‌ها و پیام‌ها در پایگاه‌داده ابری Firebase ذخیره می‌شوند؛ از هر دستگاهی با یوزرنیم و رمز خود وارد شوید و همه پیام‌هایتان بالا می‌آید.</div>
 </div>
 <p style="text-align:center;margin-top:16px;font-size:12.5px;color:var(--txt3)">با ورود، قوانین و حریم خصوصی Nexo را می‌پذیرید.</p>
 </div>
@@ -539,14 +539,17 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 <input type="file" id="fileImg" accept="image/*" class="hidden">
 <input type="file" id="fileVid" accept="video/*" class="hidden">
 <input type="file" id="fileAny" class="hidden">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
 /* =========================================================
-NEXO — لایه داده
-همه توابع Backend فعلاً روی حافظه محلی اجرا می‌شوند.
-برای اتصال Firebase کافی است بدنه همان توابع را با
-Firestore / Realtime DB جایگزین کنید؛ هیچ جای دیگری
-نیاز به تغییر ندارد.
+NEXO — لایه داده با Firebase Realtime Database
 ========================================================= */
+const firebaseConfig={
+databaseURL:'https://nexo-gram-default-rtdb.europe-west1.firebasedatabase.app/'
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const KEY='nexo.db.v4';
 const uid=p=>p+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
@@ -656,17 +659,38 @@ const S=DB.load();
 S.stories=S.stories.filter(s=>Date.now()-s.createdAt<864e5);
 const state={section:'chats',folder:'all',chatId:null,infoOpen:false,query:'',listQuery:'',settingsPage:'main',
 replyTo:null,editId:null,selectMode:false,selected:new Set(),drafts:{},stick:true};
-/* ---------- Backend stub (Firebase hook) ---------- */
+/* ---------- Backend با Firebase ---------- */
 const Backend={
-async searchUsers(q){const n=norm(q);return Object.values(S.users).filter(u=>u.id!==S.me&&(norm(u.username)===n||norm(u.username).startsWith(n)||u.name.toLowerCase().includes(q.toLowerCase())))},
-async getUserByUsername(un){const n=norm(un);return Object.values(S.users).find(u=>norm(u.username)===n)||null},
-async sendMessage(chatId,msg){/* TODO: push to Firestore */return msg},
+async searchUsers(q){
+const n=norm(q);
+const snap=await db.ref('users').orderByChild('username').startAt(n).endAt(n+'\uf8ff').once('value');
+const users=[];
+snap.forEach(c=>{const u=c.val();if(u.id!==S.me)users.push(u)});
+const snap2=await db.ref('users').once('value');
+snap2.forEach(c=>{const u=c.val();if(u.id!==S.me&&u.name&&u.name.toLowerCase().includes(q.toLowerCase())&&!users.find(x=>x.id===u.id))users.push(u)});
+return users;
+},
+async getUserByUsername(un){
+const n=norm(un);
+const snap=await db.ref('users').orderByChild('username').equalTo(n).once('value');
+let found=null;
+snap.forEach(c=>{found=c.val()});
+return found;
+},
+async checkUsernameAvailable(un,myId){
+const n=norm(un);
+const snap=await db.ref('users').orderByChild('username').equalTo(n).once('value');
+let exists=false;
+snap.forEach(c=>{const u=c.val();if(u.id!==myId)exists=true});
+return !exists;
+},
+async sendMessage(chatId,msg){return msg},
 async markRead(chatId){},
 async setTyping(chatId){},
-async publishStory(st){/* TODO: upload to Storage + Firestore stories */return st},
+async publishStory(st){return st},
 async subscribe(){}
 };
-/* ---------- همگام‌سازی زنده دیتابیس (پیام‌ها همان لحظه می‌آیند) ---------- */
+/* ---------- همگام‌سازی زنده دیتابیس ---------- */
 let __snap='';
 function liveSync(){
 const raw=localStorage.getItem(KEY)||'';
@@ -772,28 +796,32 @@ const nm=$('#inName');
 row.innerHTML=`<label class="av-upload" for="avFile">${ICO.plus}</label>`+
 AVCOLS.map((c,i)=>`<div class="av-pick ${authAv.src?'':(authAv.col===c?'sel':'')}" data-act="pick-col" data-i="${i}" style="background:linear-gradient(140deg,${c[0]},${c[1]})">${esc(((nm&&nm.value)||'N')[0])}</div>`).join('');
 }
-function signup(){
+async function signup(){
 const name=$('#inName').value.trim(),un=norm($('#inUser').value),pass=$('#inPass').value;
 const err=$('#authErr');err.classList.remove('show');
 if(name.length<2){return showErr('نام نمایشی باید حداقل ۲ حرف باشد')}
 if(!validUn(un)){return showErr('یوزرنیم: ۵ تا ۳۲ حرف انگلیسی، عدد یا _ و شروع با حرف')}
 if(pass.length<6){return showErr('رمز عبور باید حداقل ۶ کاراکتر باشد')}
-if(Object.values(S.users).some(u=>norm(u.username)===un&&u.id!==S.me))return showErr('این یوزرنیم قبلاً گرفته شده');
+const available=await Backend.checkUsernameAvailable(un,null);
+if(!available)return showErr('این یوزرنیم قبلاً گرفته شده');
 const id=uid('u');
-S.users[id]={id,name,username:un,pass,bio:'',avatar:{col:authAv.col,src:authAv.src},createdAt:Date.now(),lastSeen:Date.now(),online:true,contact:false,blocked:false};
+const user={id,name,username:un,pass,bio:'',avatar:{col:authAv.col,src:authAv.src},createdAt:Date.now(),lastSeen:Date.now(),online:true,contact:false,blocked:false};
+S.users[id]=user;
+await db.ref('users/'+id).set(user);
 S.me=id;S.chats['saved_'+id]={id:'saved_'+id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
 DB.save();enterApp();toast('به Nexo خوش آمدی، '+name+' 👋');
 }
-function login(){
+async function login(){
 const un=norm($('#lgUser').value),pass=$('#lgPass').value;
 const err=$('#authErr');err.classList.remove('show');
 if(!un)return showErr('یوزرنیم را وارد کنید');
 if(!pass)return showErr('رمز عبور را وارد کنید');
-const u=Object.values(S.users).find(x=>norm(x.username)===un);
-if(!u)return showErr('کاربری با این یوزرنیم پیدا نشد؛ ابتدا «حساب جدید» بسازید.');
-if(!u.pass)return showErr('این حساب رمز عبور ندارد (نسخه قدیمی)؛ لطفاً حساب جدید بسازید.');
-if(u.pass!==pass)return showErr('رمز عبور نادرست است.');
-S.me=u.id;u.online=true;u.lastSeen=Date.now();
+const u=await Backend.getUserByUsername(un);
+if(!u)return showErr('کاربری با این یوزرنیم پیدا نشد');
+if(!u.pass)return showErr('این حساب رمز عبور ندارد');
+if(u.pass!==pass)return showErr('رمز عبور نادرست است');
+S.me=u.id;S.users[u.id]=u;u.online=true;u.lastSeen=Date.now();
+await db.ref('users/'+u.id).update({online:true,lastSeen:Date.now()});
 if(!S.chats['saved_'+u.id])S.chats['saved_'+u.id]={id:'saved_'+u.id,type:'saved',messages:[],unread:0,pinned:false,muted:false,archived:false,createdAt:Date.now()};
 DB.save();enterApp();toast('خوش برگشتی، '+u.name+' 👋');
 }
@@ -1420,15 +1448,12 @@ function newPrivateModal(){
 modal({title:'گفتگوی جدید',icon:ICO.search,
 body:`<div class="search-box" style="margin-bottom:14px">${ICO.search}<input id="npQ" placeholder="یوزرنیم را با @ یا بدون @ وارد کنید…" style="direction:ltr"></div>
 <div id="npRes"></div>
-<div class="note" style="margin-top:12px">جستجو بر اساس یوزرنیم دقیق یا بخشی از آن انجام می‌شود؛ کانال‌ها و گروه‌های عمومی هم پیدا می‌شوند.</div>`,
+<div class="note db-note" style="margin-top:12px">جستجو در پایگاه‌داده ابری — همه کاربران Nexo قابل یافتن هستند.</div>`,
 onMount:ov=>{const q=$('#npQ',ov),r=$('#npRes',ov);
-const run=()=>{const v=q.value.trim();if(!v){r.innerHTML=`<div class="sec-title">مخاطبین</div>`+(Object.values(S.users).filter(u=>u.contact&&u.id!==S.me).map(u=>rowU(u)).join('')||`<p style="color:var(--txt2);font-size:13px;padding:0 8px">مخاطبی ندارید — یوزرنیم را بالا جستجو کنید.</p>`);return}
-const n=norm(v);
-const users=Object.values(S.users).filter(u=>u.id!==S.me&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(v.toLowerCase())));
-const chats=Object.values(S.chats).filter(c=>(c.type==='group'||c.type==='channel')&&((c.title||'').toLowerCase().includes(v.toLowerCase())||(c.username&&norm(c.username).includes(n))));
-r.innerHTML=(users.length?`<div class="sec-title">کاربران</div>`+users.map(u=>rowU(u)).join(''):'')+
-(chats.length?`<div class="sec-title">گروه‌ها و کانال‌ها</div>`+chats.map(c=>`<div class="mrow" data-act="open-chat" data-id="${c.id}">${avatarHTML(c.avatar,46,c.title)}<div class="rc"><div class="rn">${esc(c.title)}</div><div class="rs">${c.username?'@'+esc(c.username):chatSub(c)}</div></div></div>`).join(''):'')+
-(!users.length&&!chats.length?`<div class="mrow" data-act="lookup" data-un="${esc(n)}">${avatarHTML({col:['#f7e8ab','#a89018']},46,'@')}<div class="rc"><div class="rn">یوزرنیم «${esc(n)}» پیدا نشد</div><div class="rs">با اتصال پایگاه‌داده، کاربران سراسری اینجا یافت می‌شوند</div></div></div>`:'')};
+const run=async()=>{const v=q.value.trim();if(!v){r.innerHTML=`<div class="sec-title">مخاطبین</div>`+(Object.values(S.users).filter(u=>u.contact&&u.id!==S.me).map(u=>rowU(u)).join('')||`<p style="color:var(--txt2);font-size:13px;padding:0 8px">مخاطبی ندارید — یوزرنیم را بالا جستجو کنید.</p>`);return}
+r.innerHTML='<p style="color:var(--txt2);padding:14px;text-align:center">در حال جستجو...</p>';
+const users=await Backend.searchUsers(v);
+r.innerHTML=users.length?`<div class="sec-title">کاربران (${fa(users.length)})</div>`+users.map(u=>rowU(u)).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px">کاربری با «${esc(v)}» پیدا نشد</p>`};
 q.oninput=run;run();q.focus();
 function rowU(u){return `<div class="mrow" data-act="start-private" data-id="${u.id}">${avatarHTML(u.avatar,46,u.name,u.online)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)} • ${u.online?'آنلاین':relTime(u.lastSeen)}</div></div></div>`}}});
 }
@@ -1446,9 +1471,12 @@ onMount:ov=>{
 let av=null;const sel=new Set();
 $('#grpAv',ov).onchange=async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);av={src:d.src};$('#grpAvPrev',ov).innerHTML=avatarHTML(av,74,'گ')};
 const list=$('#grpList',ov),q=$('#grpQ',ov);
-const render=()=>{const v=norm(q.value);
-const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
-list.innerHTML=arr.length?arr.map(u=>`<div class="mrow ${sel.has(u.id)?'on':''}" data-sel="${u.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="color:var(--txt2);font-size:13px;text-align:center;padding:14px">کاربری پیدا نشد. از «یوزرنیم» برای افزودن استفاده کنید.</p>`;
+const render=async()=>{const v=q.value.trim();
+if(!v){list.innerHTML=`<p style="color:var(--txt2);font-size:13px;text-align:center;padding:14px">یوزرنیم را وارد کنید تا کاربران پیدا شوند</p>`;return}
+list.innerHTML='<p style="color:var(--txt2);padding:14px;text-align:center">در حال جستجو...</p>';
+const users=await Backend.searchUsers(v);
+const arr=users.filter(u=>u.id!==S.me&&!u.blocked);
+list.innerHTML=arr.length?arr.map(u=>`<div class="mrow ${sel.has(u.id)?'on':''}" data-sel="${u.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="color:var(--txt2);font-size:13px;text-align:center;padding:14px">کاربری پیدا نشد</p>`;
 $$('[data-sel]',list).forEach(el2=>el2.onclick=()=>{const id=el2.dataset.sel;sel.has(id)?sel.delete(id):sel.add(id);render()})};
 q.oninput=render;render();
 $('#grpOk',ov).onclick=()=>{
@@ -1536,8 +1564,11 @@ const c=chatById(id);if(!c)return;
 modal({title:'افزودن عضو',icon:ICO.users,
 body:`<div class="search-box" style="margin-bottom:12px">${ICO.search}<input id="amQ" placeholder="یوزرنیم یا نام مخاطب…"></div><div id="amList"></div>`,
 onMount:ov=>{const q=$('#amQ',ov),l=$('#amList',ov);
-const run=()=>{const v=norm(q.value);
-const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!c.members[u.id]&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
+const run=async()=>{const v=q.value.trim();
+if(!v){l.innerHTML='<p style="color:var(--txt2);text-align:center;padding:16px;font-size:13px">یوزرنیم را وارد کنید</p>';return}
+l.innerHTML='<p style="color:var(--txt2);padding:14px;text-align:center">در حال جستجو...</p>';
+const users=await Backend.searchUsers(v);
+const arr=users.filter(u=>u.id!==S.me&&!c.members[u.id]);
 l.innerHTML=arr.length?arr.map(u=>`<div class="mrow" data-act="add-member-do" data-id="${u.id}" data-cid="${c.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span style="color:var(--gold)">${ICO.plus}</span></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px;font-size:13px">کاربری برای افزودن پیدا نشد.</p>`};
 q.oninput=run;run();q.focus()}});
 }
@@ -1591,7 +1622,7 @@ const close=()=>{d.style.animation='fade .2s reverse both';setTimeout(()=>d.remo
 $('#lbX',d).onclick=close;d.onclick=e=>{if(e.target===d)close()};
 }
 function reactMenu(mid,anchor){
-const set=['👍','❤️','🔥','😮','😂','😢','👏'];
+const set=['👍','❤️','🔥','😮','😂','','😢','👏'];
 menuAt(anchor,`<div style="display:flex;gap:4px;padding:4px">${set.map(e=>`<button class="ebtn" data-act="react" data-mid="${mid}" data-e="${e}" style="width:38px;height:38px">${e}</button>`).join('')}</div>`);
 }
 function menuAt(anchor,html,opts={}){
@@ -1667,14 +1698,14 @@ function fb(){const a=document.createElement('textarea');a.value=t;document.body
 }
 /* ---------- Emoji picker ---------- */
 const EMO={
-'صورتک':['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠'],
-'دست و قلب':['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💯','💢','💥','💫','💦','💨','🕳','💤'],
-'حیوانات و طبیعت':['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🕸','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐆','🦓','🦍','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦚','🦜','🦢','🦩','🕊','🐇','🦝','🦨','🦡','🦦','🦥','🐁','🐀','🐿','🦔','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁','🍄','🌾','🌺','🌻','🌹','🥀','🌷','🌸','💐','🍄','🌰','🌎','🌍','🌏','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','✨','⚡','☄️','💥','🔥','🌪','🌈','☀️','🌤','⛅','🌥','☁️','🌧','⛈','🌩','🌨','❄️','☃️','⛄','🌬','💧','💦','☔'],
-'غذا و نوشیدنی':['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥬','🥒','🌶','🫑','🥕','🧄','🧅','🥔','🍠','🥐','🥯','🍞','🥖','🥨','🥪','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🍔','🍟','🍕','🫓','🥪','🌭','🌮','🫔','🥙','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🥛','🍼','☕','🍵','🧃','🥤','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾','🥄','🍴','🍽','🔪','🧊'],
-'فعالیت و سفر':['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸','🥌','🎿','⛷','🏂','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🪗','🎸','🎻','🎲','♟','🎯','🎳','🎮','🎰','🧩','🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍','🛺','🚲','🛴','🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🚀','🛸','🚁','🛶','⛵','🚤','🛥','🛳','⛴','🗺','🗿','🗽','🗼','🏰','🏯','🏟','🎡','🎢','🎠','⛲','⛱','🏖','🏝','🏜','🌋','⛰','🏔','🗻','🏕','⛺','🏡','🏠','🏚','🏗','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','⛩','🕋'],
-'اشیا و نماد':['⌚','📱','📲','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🎙','🎚','🎛','🧭','⏱','⏲','⏰','🕰','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯','🪔','🧯','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','🧰','🪛','🔧','🔨','⚒','🛠','⛏','🔩','⚙️','🧱','⛓','🧲','🔫','💣','🧨','🪓','🔪','🗡','⚔️','🛡','🚬','⚰️','🪦','⚱️','🏺','🔮','📿','🧿','💈','⚗️','🔭','🔬','🕳','🩹','🩺','💊','💉','🩸','🧬','🦠','🧫','🧪','🌡','🧹','🪠','🧺','🧻','🚽','🚰','🚿','🛁','🛀','🧼','🪥','🪒','🧽','🪣','🧴','🛎','🔑','🗝','🚪','🪑','🛋','🛏','🛌','🧸','🪆','🖼','🛍','🛒','🎁','🎈','🎏','🎀','🪄','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','💌','📥','📤','📦','🏷','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','✅','❌','❓','❗','‼️','⁉️','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','⬛','⬜','🔈','🔇','🔉','🔊','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
+'صورتک':['😀','😃','😄','😁','','😅','','😂','🙂','','😉','😊','😇','🥰','😍','','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','','🤗','🤭','🤫','','🤨','','😑','😶','😏','😒','','😬','','😌','😔','😪','🤤','','😷','','','🤢','','','🥶','','😵','🤯','🤠','','😎','','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡',''],
+'دست و قلب':['👋','','🖐','✋','🖖','','🤌','','✌️','🤞','','🤘','🤙','','👉','👆','','','☝️','👍','','✊','👊','','🤜','👏','🙌','👐','🤲','','💪','','❤️','','💛','','💙','💜','🖤','🤍','','💔','️','💕','💞','💓','💗','💖','💘','💝','💯','💢','💥','💫','💦','💨','🕳','💤'],
+'حیوانات و طبیعت':['🐶','🐱','','🐹','🐰','🦊','','','🐨','🐯','🦁','','🐷','🐸','🐵','','🙉','','','🐔','🐧','🐦','🐤','','','🦆','🦅','🦉','🦇','🐺','','','🦄','🐝','🐛','','🐌','🐞','','🦟','🦗','','','🦂','','🐍','🦎','🦖','🦕','','🦑','🦐','🦞','🦀','🐡','','🐟','🐬','🐳','🐋','🦈','🐊','','','🦓','🦍','','🐘','🦛','','🐪','🐫','','🦘','','🐄','🐎','🐖','🐏','🐑','🦙','🐐','','','🐩','🦮','','🐓','🦃','🦚','🦜','🦢','🦩','🕊','🐇','','','🦡','🦦','🦥','🐁','','🐿','🦔','🐉','🐲','','🎄','🌲','','🌴','🌱','🌿','☘️','🍀','','','🍃','🍂','🍁','🌾','🌺','','','🥀','🌷','🌸','','🍄','🌰','🌎','🌍','','🌕','','🌗','🌘','','🌒','🌓','🌔','🌙','','⭐','','✨','','☄️','💥','🔥','','','☀️','','⛅','🌥','️','','🌧','','','🌨','️','☃️','⛄','','💧','💦','☔'],
+'غذا و نوشیدنی':['🍏','','🍐','🍊','','','🍉','🍇','🍓','','🍈','🍒','🍑','🥭','🍍','🥥','','','🍆','','','🥬','🥒','🌶','🫑','🥕','','🧅','🥔','🍠','🥐','🥯','🍞','🥖','','','🥚','🍳','🧈','🥞','🧇','','','🍗','🍖','','🍔','🍟','🍕','🫓','🥪','','','🌮','','🫔','','🥘','🫕','🥫','🍝','🍜','🍲','🍛','','🍱','🥟','','🍤','🍙','🍚','🍘','🍥','','🥮','🍢','🍡','🍧','','🍦','🥧','🧁','','🎂','🍮','🍭','🍬','','🍿','🍩','🍪','🌰','','🍯','🥛','🍼','☕','🍵','','🥤','','🍶','','🍻','','🍷','','🍸','🍹','🧉','','🥄','','🍽','','🧊'],
+'فعالیت و سفر':['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','','🥍','🏏','🪃','','⛳','','','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸','🥌','','⛷','🏂','','🏋️','🤼','','⛹️','🤺','','🏌️','🏇','🧘','','🏊','🤽','','🧗','','🚵','','🏆','','🥈','','🏅','','🎭','','🎬','','🎧','','🎹','','🎷','','🪗','','🎻','🎲','♟','🎯','🎳','🎮','🎰','🧩','🚗','🚕','🚙','🚌','🚎','','🚓','🚑','🚒','🚐','🛻','🚚','','🚜','🛵','🏍','🛺','🚲','','🚨','','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🚀','','🚁','🛶','','','🛥','🛳','⛴','','🗺','','🗽','🗼','','🏯','🏟','🎡','🎢','🎠','⛲','⛱','🏖','🏝','🏜','🌋','⛰','🏔','🗻','','⛺','','🏡','','🏚','','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','','🕋','⛩'],
+'اشیا و نماد':['⌚','','📲','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥','','🎞','','☎️','','📠','📺','📻','🎙','','🎛','','⏱','⏲','⏰','','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯','🪔','','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','','🧰','🪛','🔧','','⚒','','','🔩','️','','⛓','🧲','🔫','💣','🧨','','','🗡','⚔️','🛡','🚬','⚰️','🪦','⚱️','🏺','','📿','🧿','💈','⚗️','🔭','🔬','🕳','','🩺','💊','💉','🩸','🧬','','🧫','','🌡','','🪠','🧺','🧻','🚽','','🚿','','🛀','','🪥','🪒','🧽','🪣','🧴','🛎','🔑','🗝','','🪑','🛋','🛏','🛌','','🪆','🖼','','🛒','','🎈','','🎀','🪄','🎊','🎉','🎎','🏮','🎐','🧧','️','📩','📨','📧','','📥','📤','📦','🏷','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','','🧾','','📈','','✅','❌','❓','❗','‼️','⁉️','🔴','🟠','🟡','🟢','🔵','','⚫','⚪','🟤','🔺','','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','⬛','⬜','🔈','🔇','🔉','🔊','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
 };
-const STICKERS=['😍','🤩','🔥','💎','👑','🌹','✨','🎉','💯','🥇','🦁','🚀','❤️','😎','🥂','🥹','☀️','🍀','🎁','🏆','👏','🙏','🫂','🥰','😴','🤝','🫶','🌙','👻','💀'];
+const STICKERS=['😍','🤩','🔥','💎','👑','🌹','✨','🎉','','🥇','🦁','🚀','❤️','😎','','🥹','☀️','🍀','🎁','🏆','👏','🙏','','🥰','😴','','🫶','','👻',''];
 const RECENT_KEY='nexo.recent.emoji';
 let pickerOpen=false,pickerCat='صورتک';
 function syncEmojiBtn(){const b=$('#emojiBtn');if(b)b.classList.toggle('on',pickerOpen)}
@@ -1698,7 +1729,7 @@ const grid=$('#emGrid',slot);
 const paint=list=>{grid.innerHTML=list.map(e=>`<button class="ebtn" data-em="${e}">${e}</button>`).join('')};
 const showCat=c=>{pickerCat=c;$$('.pcat',slot).forEach(b=>b.classList.toggle('on',b.dataset.cat===c));
 grid.classList.toggle('big',c==='__sticker');
-if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','😢','😂']);else paint(EMO[c])};
+if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','','😂']);else paint(EMO[c])};
 showCat(recents.length?'__recent':cats[0]);
 $$('.pcat',slot).forEach(b=>b.onclick=()=>showCat(b.dataset.cat));
 $('#emSearch',slot).oninput=e=>{const q=e.target.value.trim();grid.classList.remove('big');
@@ -1977,7 +2008,7 @@ modal({title:'مصرف حافظه',icon:ICO.db,body:`
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
 ${[['حجم داده‌های محلی',fSize(size)],['تعداد پیام‌ها',fa(msgs)],['رسانه‌های ذخیره‌شده',fa(media)],['گفتگوها',fa(Object.keys(S.chats).length)]]
 .map(([t,v])=>`<div style="background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:16px;text-align:center"><div class="gold-t" style="font-size:20px;font-weight:800">${v}</div><div style="font-size:12px;color:var(--txt2);margin-top:4px">${t}</div></div>`).join('')}
-</div><div class="note db-note" style="margin-top:14px">داده‌ها روی حافظه محلی مرورگر نگه داشته می‌شوند تا اتصال پایگاه‌داده ابری فعال شود.</div>`});
+</div><div class="note db-note" style="margin-top:14px">داده‌ها روی Firebase Realtime Database ذخیره می‌شوند.</div>`});
 }
 function devData(){
 const exists=Object.values(S.users).some(u=>u.demo);
@@ -2008,7 +2039,7 @@ function manageFolders(){
 modal({title:'مدیریت پوشه‌ها',icon:ICO.folder,
 body:S.folders.length?S.folders.map(f=>`<div class="mrow"><div class="rc"><div class="rn">${esc(f.n)}</div><div class="rs">${fa((f.chats||[]).length)} گفتگو</div></div>
 <button class="btn btn-ghost btn-sm" data-del="${f.id}">حذف</button></div>`).join('')+
-`<div class="note" style="margin-top:12px">برای افزودن گفتگو به پوشه، روی گفتگو راست‌کلیک (یا لمس طولانی) کنید و «افزودن به پوشه» را بزنید.</div>`
+`<div class="note db-note" style="margin-top:12px">برای افزودن گفتگو به پوشه، روی گفتگو راست‌کلیک (یا لمس طولانی) کنید و «افزودن به پوشه» را بزنید.</div>`
 :`<p style="text-align:center;color:var(--txt2);padding:20px">هنوز پوشه‌ای نساخته‌اید.</p>`,
 onMount:ov=>{$$('[data-del]',ov).forEach(b=>b.onclick=()=>{S.folders=S.folders.filter(f=>f.id!==b.dataset.del);if(!FOLDERS().some(f=>f.id===state.folder))state.folder='all';DB.save();closeModal(ov);renderList();toast('پوشه حذف شد')})}});
 }
@@ -2051,8 +2082,8 @@ if(res.length){state.section='search';state.listQuery=n;renderRail();renderList(
 modal({title:'یافت نشد',icon:ICO.search,body:`<div style="text-align:center;padding:14px">
 <div style="width:70px;margin:0 auto 12px;color:var(--gold)">${ICO.search}</div>
 <h3 style="margin:0 0 6px">@${esc(n)}</h3>
-<p style="color:var(--txt2);font-size:13.5px;margin:0 0 16px">کاربر، گروه یا کانالی با این یوزرنیم در پایگاه‌داده محلی پیدا نشد.</p>
-<div class="note db-note">با اتصال پایگاه‌داده ابری، همه کاربران Nexo از طریق یوزرنیم (با @ یا بدون @) قابل جستجو خواهند بود.</div>
+<p style="color:var(--txt2);font-size:13.5px;margin:0 0 16px">کاربر، گروه یا کانالی با این یوزرنیم در پایگاه‌داده Firebase پیدا نشد.</p>
+<div class="note db-note">می‌توانید یک پروفایل محلی با این یوزرنیم بسازید.</div>
 <button class="btn btn-gold btn-sm" id="mkDemo" style="margin-top:14px">ساخت پروفایل محلی با این یوزرنیم</button></div>`,
 onMount:ov=>{$('#mkDemo',ov).onclick=()=>{const id=uid('u');
 S.users[id]={id,name:n.replace(/[._]/g,' ').replace(/\b\w/g,x=>x.toUpperCase()),username:n,bio:'',avatar:{col:AVCOLS[Math.floor(Math.random()*AVCOLS.length)]},createdAt:Date.now(),lastSeen:Date.now(),online:false,contact:true,blocked:false};
