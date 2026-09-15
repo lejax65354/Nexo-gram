@@ -338,14 +338,7 @@ button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit
 @keyframes tout{to{opacity:0;transform:translateX(-30px)}}
 .toast .ic{color:var(--gold)}
 .toast.err .ic{color:var(--danger)}
-.db-badge{position:fixed;bottom:18px;inset-inline-end:18px;z-index:500;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;background:var(--bg3);border:1px solid var(--line2);box-shadow:var(--sh2);font-size:12px;font-weight:700;color:var(--txt2);animation:tin .3s both;display:none!important;visibility:hidden!important;height:0!important;width:0!important;overflow:hidden!important;padding:0!important;margin:0!important;border:0!important}
-.db-badge i{width:9px;height:9px;border-radius:50%;background:var(--txt3);flex:0 0 auto}
-.db-badge.wait i{background:var(--gold);animation:blink 1s infinite}
-.db-badge.wait{color:var(--gold);border-color:var(--line)}
-.db-badge.conn i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
-.db-badge.conn{color:var(--ok);border-color:rgba(76,217,123,.35)}
-.db-badge.err i{background:var(--danger);box-shadow:0 0 8px var(--danger)}
-.db-badge.err{color:var(--danger);border-color:rgba(255,107,107,.4)}
+.db-badge{display:none!important}
 .lightbox{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.94);display:grid;place-items:center;animation:fade .25s both}
 .lightbox img{max-width:94vw;max-height:88vh;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.8)}
 .lb-bar{position:absolute;top:14px;inset-inline:14px;display:flex;gap:8px;justify-content:flex-end}
@@ -388,7 +381,6 @@ button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit
 .pane-info{width:100%;z-index:50}
 .chat-body{padding:14px 12px 6px}
 .bub{max-width:86%}
-.db-badge{bottom:76px}
 }
 @media(max-width:1024px){.pane-list,.pane-chat{height:calc(100vh - 62px)}}
 @media(max-width:560px){.theme-cards{grid-template-columns:1fr}.brand h1{font-size:28px}}
@@ -455,22 +447,14 @@ appId:"1:321421342401:web:45aaffe918c2499cffc640"
 let RTDB=null, FB_OK=false;
 try{ firebase.initializeApp(FB_CFG); RTDB=firebase.database(); }catch(e){ console.error('FB init:',e); }
 const R=p=>RTDB.ref(p);
-function dbBadge(st,txt){
-const b=document.getElementById('dbBadge'); if(!b)return;
-b.className='db-badge '+st;
-b.querySelector('span').textContent=txt;
-}
+function dbBadge(st,txt){}
 function monitorConn(){
-if(!RTDB){ dbBadge('err','خطا: SDK دیتابیس بارگذاری نشد'); return; }
+if(!RTDB)return;
 const connRef=R('.info/connected');
 connRef.on('value',s=>{
-if(s.val()===true){ FB_OK=true; dbBadge('conn','دیتابیس متصل ✅'); }
-else{ FB_OK=false; dbBadge('wait','در حال اتصال به دیتابیس…'); }
-},err=>{
-console.error('Connection error:',err);
-dbBadge('err','خطا در اتصال — اینترنت را بررسی کنید');
+if(s.val()===true){FB_OK=true;}
+else{FB_OK=false;}
 });
-setTimeout(()=>{ if(!FB_OK) dbBadge('err','اتصال برقرار نشد — صفحه را رفرش کنید'); },12000);
 }
 async function hashPass(p){
 if(window.crypto && crypto.subtle){
@@ -482,7 +466,7 @@ return 'x'+(h>>>0).toString(16);
 }
 /* ============ HELPERS ============ */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const KEY='nexo.db.v5';
+const KEY='nexo.db.v6';
 const uid=p=>p+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
 const norm=u=>String(u||'').trim().replace(/^@+/,'').toLowerCase();
 const PD='۰۱۲۳۴۵۶۷۸۹';
@@ -521,6 +505,7 @@ const S=DB.load();
 S.stories=S.stories.filter(s=>Date.now()-s.createdAt<864e5);
 const me=()=>DB.data.me?DB.data.users[DB.data.me]:null;
 const state={section:'chats',folder:'all',chatId:null,infoOpen:false,query:'',listQuery:'',settingsPage:'main',replyTo:null,editId:null,selectMode:false,selected:new Set(),drafts:{},stick:true};
+let renderedMsgIds=new Set();
 /* ============ AVATARS ============ */
 const AVCOLS=[['#f7e8ab','#b8912a'],['#ffd9a0','#c07a2a'],['#ffe3f0','#c05a8a'],['#c9f0ff','#3a86b8'],['#d6ffd9','#3aa35a'],['#e6dcff','#7a5ac0'],['#ffd6d6','#c04a4a'],['#fff3c4','#a89018']];
 function avStyle(a){if(a&&a.src)return'';const c=(a&&a.col)||AVCOLS[0];return `background:linear-gradient(140deg,${c[0]},${c[1]})`}
@@ -540,7 +525,7 @@ if(c.peerId && S.users[c.peerId])return S.users[c.peerId];
 const ks=Object.keys(c.members||{}).filter(k=>k!==S.me);
 return S.users[ks[0]]||null;
 }
-function chatName(c){if(!c)return'';if(c.type==='saved')return 'پیام‌های ذخیره‌شده';if(c.type==='private'){const p=peerOf(c);return p?p.name:'کاربر حذف‌شده'}return c.title}
+function chatName(c){if(!c)return'';if(c.type==='saved')return 'پیام‌های ذخیره‌شده';if(c.type==='private'){const p=peerOf(c);return p?p.name:'کاربر'}return c.title}
 function chatSub(c){
 if(c.type==='saved')return 'یادداشت‌های شخصی شما';
 if(c.type==='private'){const p=peerOf(c);if(!p)return '';return p.online?'آنلاین':relTime(p.lastSeen)}
@@ -767,7 +752,7 @@ attachLongPress();
 }
 function storyBarHTML(){
 const u=me();const mine=activeStories(S.me);
-const others=Object.values(S.users).filter(x=>x.id!==S.me&&!x.blocked&&activeStories(x.id).length);
+const others=Object.values(S.users).filter(x=>x.id!==S.me&&!x.blocked&&x.known&&activeStories(x.id).length);
 if(!mine.length&&!others.length){
 return `<div class="story-bar"><div class="story-item" data-act="new-story">
 <div class="story-ring add">${avatarHTML(u.avatar,54,u.name)}<b class="splus">+</b></div><span class="sname">استوری شما</span></div>
@@ -822,36 +807,29 @@ ${acts?`<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
 <button class="btn btn-ghost btn-sm" data-act="new-channel">${ICO.mega} کانال جدید</button></div>`:''}</div>`;
 }
 function contactsHTML(q){
-const all=Object.values(S.users).filter(u=>u.id!==S.me);
+const known=Object.values(S.users).filter(u=>u.id!==S.me&&u.known);
 const n=norm(q||'');
-const contacts=all.filter(u=>u.contact&&!u.blocked).filter(u=>!q||u.name.toLowerCase().includes(q.toLowerCase())||norm(u.username).includes(n));
-const others=all.filter(u=>!u.contact&&!u.blocked).filter(u=>!q||u.name.toLowerCase().includes(q.toLowerCase())||norm(u.username).includes(n));
-const blocked=all.filter(u=>u.blocked);
-let html=`<div class="sec-title">افزودن مخاطب جدید</div>
-<div class="item" data-act="new-private">${avatarHTML({col:['#f7e8ab','#a89018']},48,'+')}<div class="col"><div class="top"><span class="nm">جستجو با یوزرنیم</span></div><div class="btm"><span class="pv">با @ یا بدون @</span></div></div></div>
-<div class="item" data-act="new-group">${avatarHTML({col:['#d6ffd9','#3aa35a']},48,'G')}<div class="col"><div class="top"><span class="nm">گروه جدید</span></div><div class="btm"><span class="pv">چند نفره با مدیر و دسترسی‌ها</span></div></div></div>
-<div class="item" data-act="new-channel">${avatarHTML({col:['#c9f0ff','#3a86b8']},48,'C')}<div class="col"><div class="top"><span class="nm">کانال جدید</span></div><div class="btm"><span class="pv">عمومی یا خصوصی</span></div></div></div>`;
-const block=(title,arr,act)=>arr.length?`<div class="sec-title">${title}</div>`+arr.map(u=>`
-<div class="item" data-act="${act}" data-id="${u.id}">${avatarHTML(u.avatar,48,u.name,u.online)}
+const filtered=known.filter(u=>!q||u.name.toLowerCase().includes(q.toLowerCase())||norm(u.username).includes(n));
+let html=`<div class="sec-title">مخاطبین شما</div>`;
+if(filtered.length){
+html+=filtered.map(u=>`<div class="item" data-act="open-user" data-id="${u.id}">${avatarHTML(u.avatar,48,u.name,u.online)}
 <div class="col"><div class="top"><span class="nm">${esc(u.name)}</span></div>
-<div class="btm"><span class="pv" style="direction:ltr">@${esc(u.username)}</span></div></div></div>`).join(''):'';
-html+=block('مخاطبین',contacts,'open-user')+block('کاربران شناخته‌شده',others,'open-user');
-html+=blocked.length?block('مسدود شده‌ها',blocked,'open-user'):'';
-if(!contacts.length&&!others.length)html+=`<div class="empty" style="padding:40px 20px">${EMPTY_SVG}<h3>مخاطبی پیدا نشد</h3><p>یوزرنیم را در کادر جستجو وارد کن.</p></div>`;
+<div class="btm"><span class="pv" style="direction:ltr">@${esc(u.username)}</span></div></div></div>`).join('');
+}else{
+html+=`<div class="empty" style="padding:40px 20px">${EMPTY_SVG}<h3>مخاطبی نداری</h3><p>از قسمت جستجو یوزرنیم کسی رو وارد کن و شروع به چت کن.</p></div>`;
+}
+html+=`<div class="sec-title">شروع گفتگوی جدید</div>
+<div class="item" data-act="new-private">${avatarHTML({col:['#f7e8ab','#a89018']},48,'+')}<div class="col"><div class="top"><span class="nm">جستجو با یوزرنیم</span></div><div class="btm"><span class="pv">با @ یا بدون @</span></div></div></div>`;
 return html;
 }
 function globalSearchHTML(q){
 if(!q)return `<div class="empty">${ICO.search.replace('class="ic"','class="ic" style="width:70px;height:70px;opacity:.35"')}<h3>جستجوی سراسری</h3><p>یوزرنیم کاربر، گروه یا کانال را بنویس.</p></div>`;
 const n=norm(q);let out='';
-const users=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(q.toLowerCase())));
 const chats=Object.values(S.chats).filter(c=>c.type!=='private'&&c.type!=='saved'&&(c.title.toLowerCase().includes(q.toLowerCase())||(c.username&&norm(c.username).includes(n))));
-if(users.length||chats.length){
-out+=`<div class="sec-title">کاربران</div>`;
-out+=users.map(u=>`<div class="item" data-act="open-user" data-id="${u.id}">${avatarHTML(u.avatar,48,u.name,u.online)}<div class="col"><div class="top"><span class="nm">${esc(u.name)}</span></div><div class="btm"><span class="pv" style="direction:ltr">@${esc(u.username)}</span></div></div></div>`).join('')||`<div class="item" style="cursor:default"><div class="col"><span class="pv">کاربری با این نام پیدا نشد</span></div></div>`;
-out+=`<div class="sec-title">گروه‌ها و کانال‌ها</div>`;
-out+=chats.map(c=>chatItemHTML(c,0)).join('')||`<div class="item" style="cursor:default"><div class="col"><span class="pv">موردی پیدا نشد</span></div></div>`;
-}else{
 out+=`<div class="sec-title">جستجو در دیتابیس</div><div class="item" data-act="lookup" data-un="${esc(n)}">${avatarHTML({col:['#f7e8ab','#a89018']},48,'@')}<div class="col"><div class="top"><span class="nm">جستجوی ${esc('@'+n)}</span></div><div class="btm"><span class="pv">در دیتابیس ابری</span></div></div></div>`;
+if(chats.length){
+out+=`<div class="sec-title">گروه‌ها و کانال‌ها</div>`;
+out+=chats.map(c=>chatItemHTML(c,0)).join('');
 }
 return out;
 }
@@ -907,10 +885,9 @@ data:{title:'داده‌ها',rows:[
 {type:'switch',key:'autoMedia',label:'دانلود خودکار رسانه'},
 {type:'action',act:'storage-info',label:'مصرف حافظه',icon:ICO.db},
 {type:'action',act:'export-data',label:'پشتیبان‌گیری',icon:ICO.down},
-{type:'action',act:'dev-data',label:'داده‌های آزمایشی',icon:ICO.sparkle,desc:'کاربران نمونه (فقط محلی)'},
 {type:'action',act:'reset-all',label:'بازنشانی کامل',icon:ICO.trash,danger:true}]},
 about:{title:'درباره Nexo',rows:[
-{type:'action',act:'about-info',label:'نسخه برنامه',icon:ICO.info,desc:'Nexo 1.2.0 — متصل به Firebase RTDB'},
+{type:'action',act:'about-info',label:'نسخه برنامه',icon:ICO.info,desc:'Nexo 2.0 — متصل به Firebase RTDB'},
 {type:'action',act:'about-feat',label:'قابلیت‌ها',icon:ICO.star}]}};
 function themeCardsHTML(){
 return `<div class="sec-title">تم برنامه</div><div style="padding:0 14px 20px"><div class="theme-cards">
@@ -936,15 +913,9 @@ document.getElementById('lbody').innerHTML=`<div class="ihero">${avatarHTML(u.av
 <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
 <button class="btn btn-gold btn-sm" data-act="edit-me">${ICO.edit} ویرایش پروفایل</button>
 <button class="btn btn-ghost btn-sm" data-act="copy-un">${ICO.copy} کپی یوزرنیم</button></div></div>
-<div class="irow" data-act="edit-me" title="ویرایش درباره من"><span class="ic">${ICO.info}</span><div class="rc"><div class="rl">درباره من</div><div class="rs">${esc(u.bio||'— افزودن bio —')}</div></div><span style="color:var(--txt3)">${ICO.backR}</span></div>
+<div class="irow" data-act="edit-me"><span class="ic">${ICO.info}</span><div class="rc"><div class="rl">درباره من</div><div class="rs">${esc(u.bio||'— افزودن bio —')}</div></div></div>
 <div class="irow" data-act="${mySt.length?'view-story':'new-story'}" data-id="${S.me}"><span class="ic">${ICO.story}</span><div class="rc"><div class="rl">استوری من</div><div class="rs">${mySt.length?fa(mySt.length)+' استوری فعال':'استوری جدید'}</div></div></div>
-<div class="irow" data-act="open-chat" data-id="saved_${u.id}"><span class="ic">${ICO.save}</span><div class="rc"><div class="rl">پیام‌های ذخیره‌شده</div><div class="rs">یادداشت‌های شخصی</div></div></div>
-<div class="irow"><span class="ic">${ICO.clock}</span><div class="rc"><div class="rl">عضو از</div><div class="rs">${new Date(u.createdAt).toLocaleDateString('fa-IR',{year:'numeric',month:'long',day:'numeric'})}</div></div></div>
-<div class="sec-title">آمار</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 14px">
-${[['گفتگو',fa(Object.keys(S.chats).length)],['مخاطب',fa(Object.values(S.users).filter(x=>x.contact&&x.id!==S.me).length)],['پیام',fa(Object.values(S.chats).reduce((a,c)=>a+c.messages.length,0))]].map(([t,n])=>
-`<div style="background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:800" class="gold-t">${n}</div><div style="font-size:11.5px;color:var(--txt2)">${t}</div></div>`).join('')}
-</div>`;
+<div class="irow" data-act="open-chat" data-id="saved_${u.id}"><span class="ic">${ICO.save}</span><div class="rc"><div class="rl">پیام‌های ذخیره‌شده</div><div class="rs">یادداشت‌های شخصی</div></div></div>`;
 }
 /* ============ CHAT PANE ============ */
 function renderChat(){
@@ -983,9 +954,6 @@ ${avatarHTML(av,42,chatName(c),online)}
 <h3>${c.type==='group'?`<span class="type-ic">${ICO.group}</span>`:''}${c.type==='channel'?`<span class="type-ic">${ICO.mega}</span>`:''}${c.type==='saved'?`<span class="type-ic" style="color:var(--gold)">${ICO.save}</span>`:''}${esc(chatName(c))}</h3>
 <div class="sub ${online?'online':''}">${c.type==='private'&&online?'آنلاین':esc(sub)}${c.username?` • <span style="direction:ltr">@${esc(c.username)}</span>`:''}</div>
 </div></div>
-<button class="icon-btn" data-act="call" data-kind="voice" title="تماس صوتی">${ICO.phone}</button>
-<button class="icon-btn" data-act="call" data-kind="video" title="تماس تصویری">${ICO.video}</button>
-<button class="icon-btn" data-act="chat-search" title="جستجو">${ICO.search}</button>
 <button class="icon-btn" data-act="chat-menu" data-id="${c.id}" title="بیشتر">${ICO.dots}</button>
 </div>`;
 }
@@ -993,8 +961,7 @@ function pinnedBarHTML(c){
 const ids=c.pinnedIds||[];if(!ids.length)return '';
 const m=c.messages.find(x=>x.id===ids[ids.length-1]);if(!m)return '';
 return `<div class="pinned-msg" data-act="jump-msg" data-id="${c.id}" data-mid="${m.id}">
-<span class="pi">${ICO.pin}</span><div class="pc"><div class="pl">پیام سنجاق‌شده</div><div class="pt">${esc((m.text||'رسانه').slice(0,70))}</div></div>
-${isAdmin(c)?`<button class="icon-btn" data-act="unpin" data-mid="${m.id}" style="width:32px;height:32px">${ICO.close}</button>`:''}</div>`;
+<span class="pi">${ICO.pin}</span><div class="pc"><div class="pl">پیام سنجاق‌شده</div><div class="pt">${esc((m.text||'رسانه').slice(0,70))}</div></div></div>`;
 }
 function composerHTML(c,draft){
 if(!canPost(c)){
@@ -1022,7 +989,6 @@ sb.innerHTML=ta.value.trim()?ICO.send:ICO.mic;sb.dataset.act=ta.value.trim()?'se
 if(state.chatId)state.drafts[state.chatId]=ta.value;renderComposerBanner()};
 ta.addEventListener('input',upd);
 ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(ta.value.trim())sendText()}});
-ta.addEventListener('paste',e=>{const f=e.clipboardData&&e.clipboardData.files&&e.clipboardData.files[0];if(f&&f.type.startsWith('image/')){e.preventDefault();handleImage(f)}});
 upd();renderComposerBanner();
 const mb=document.querySelector('.mob-back');if(mb)mb.style.display=window.innerWidth<=1024?'grid':'none';
 }
@@ -1037,8 +1003,10 @@ function msgChat(id){for(const c of Object.values(S.chats)){if(c.messages.some(x
 /* ============ MESSAGES ============ */
 function renderMessages(full){
 const c=chatById(state.chatId);if(!c)return;
+renderedMsgIds.clear();
 const box=document.getElementById('msgs');if(!box)return;
 const list=c.messages;
+list.forEach(m=>renderedMsgIds.add(m.id));
 let html='',lastDay='',lastSender='',unreadShown=(c.unread||0)===0;
 const unreadStart=list.length-(c.unread||0);
 list.forEach((m,i)=>{
@@ -1057,60 +1025,31 @@ const showHead=!mine&&(c.type==='group')&&!grouped;
 const onlyEmoji=m.type==='text'&&/^(\p{Extended_Pictographic}|\s|️){1,4}$/u.test(m.text||'');
 const isSticker=m.type==='sticker';
 let inner='';
-if(m.fwd)inner+=`<div class="fwd-tag">↪ فروارد از ${esc(m.fwd.name)}</div>`;
 if(m.replyTo){const r=findMsg(m.replyTo);const rs=r?S.users[r.senderId]:null;
-inner+=`<div class="reply-box" data-act="jump-msg" data-id="${c.id}" data-mid="${m.replyTo}"><span style="color:var(--gold)">${ICO.reply.replace('class="ic"','class="ic" style="width:15px;height:15px"')}</span><div class="rc"><div class="rn">${esc(rs?rs.name:'—')}</div><div class="rt">${esc(((r&&r.text)||(r?'رسانه':'حذف‌شده')).slice(0,80))}</div></div></div>`}
+inner+=`<div class="reply-box"><span style="color:var(--gold)">${ICO.reply.replace('class="ic"','class="ic" style="width:15px;height:15px"')}</span><div class="rc"><div class="rn">${esc(rs?rs.name:'—')}</div><div class="rt">${esc(((r&&r.text)||(r?'رسانه':'حذف‌شده')).slice(0,80))}</div></div></div>`}
 if(m.type==='image')inner+=`<div class="media-img" data-act="lightbox" data-src="${m.media.src}"><img src="${m.media.src}" loading="lazy" alt=""></div>`;
-if(m.type==='video')inner+=`<div class="video-el"><video src="${m.media.src}" controls preload="metadata"></video></div>`;
-if(m.type==='file')inner+=`<div class="file-card" data-act="download" data-mid="${m.id}"><div class="file-ic">${ICO.file}</div><div><div class="fn">${esc(m.media.name)}</div><div class="fs">${fSize(m.media.size)} • برای دریافت کلیک کن</div></div></div>`;
 if(m.type==='voice')inner+=voiceHTML(m);
-if(m.type==='poll')inner+=pollHTML(m);
-if(m.type==='location')inner+=`<div class="loc-card" data-act="open-loc" data-lat="${m.loc.lat}" data-lng="${m.loc.lng}"><div class="loc-map"><div class="loc-pin">${ICO.map}</div></div><div style="font-size:13px;font-weight:700">موقعیت مکانی</div></div>`;
-if(m.type==='contact')inner+=`<div class="contact-card" data-act="open-user" data-id="${m.ct.userId}">${avatarHTML(m.ct.avatar,42,m.ct.name)}<div><div style="font-weight:800">${esc(m.ct.name)}</div><div style="font-size:12px;color:var(--txt2);direction:ltr">@${esc(m.ct.username)}</div></div></div>`;
-if(m.text&&(m.type==='text'||m.type==='image'||m.type==='video'||isSticker))
-inner+=`<div class="btxt ${(onlyEmoji||isSticker)&&!m.replyTo?'big-emoji':''}">${isSticker?'':linkify(m.text)}</div>`;
+if(m.text&&(m.type==='text'||m.type==='image'||isSticker))
+inner+=`<div class="btxt ${(onlyEmoji||isSticker)&&!m.replyTo?'big-emoji':''}">${isSticker?'':esc(m.text)}</div>`;
 const ticks=mine&&c.type!=='channel'?`<span class="ticks ${(m.readBy||[]).length>1?'read':''}">${(m.readBy||[]).length>1?ICO.check2:ICO.check}</span>`:'';
-const views=c.type==='channel'?`<span class="mini">${ICO.eye.replace('class="ic"','class="ic" style="width:14px;height:14px"')}</span> ${fa(m.views||0)}`:'';
-const meta=`<div class="bmeta">${m.editedAt?'<span class="edit-tag">ویرایش‌شده</span>':''}${views}<span>${timeStr(m.createdAt)}</span>${ticks}</div>`;
-const rs=Object.entries(m.reactions||{}).filter(([,a])=>a.length);
-const reacts=rs.length?`<div class="reacts">${rs.map(([e,a])=>`<button class="react ${a.includes(S.me)?'mine':''}" data-act="react" data-mid="${m.id}" data-e="${e}">${e} <b>${fa(a.length)}</b></button>`).join('')}</div>`:'';
+const meta=`<div class="bmeta">${m.editedAt?'<span class="edit-tag">ویرایش‌شده</span>':''}<span>${timeStr(m.createdAt)}</span>${ticks}</div>`;
 const cls=`mrow ${mine?'me':''} ${state.selected.has(m.id)?'sel':''}`;
 const av=(!mine&&c.type==='group')?avatarHTML(s.avatar,34,s.name):'';
 return `<div class="${cls}" data-mid="${m.id}">
 ${!mine&&c.type==='group'?(grouped?'<div class="gap"></div>':`<div data-act="open-user" data-id="${m.senderId}" style="cursor:pointer">${av}</div>`):''}
 <div class="bub ${mine?(grouped?'':'tail-out'):(grouped?'':'tail-in')}" data-act="bubble" data-mid="${m.id}">
-<div class="bact">
-<button data-act="react-menu" data-mid="${m.id}" title="واکنش">${ICO.smile}</button>
-<button data-act="msg-menu" data-mid="${m.id}" title="بیشتر">${ICO.dots}</button>
-</div>
-${showHead?`<div class="bhead"><span class="sn">${esc(s.name)}</span>${memberRoleTag(c,m.senderId)}</div>`:''}
-${inner}${meta}${reacts}
+${showHead?`<div class="bhead"><span class="sn">${esc(s.name)}</span></div>`:''}
+${inner}${meta}
 </div></div>`;
 }
-function memberRoleTag(c,uidv){const m=c.members&&c.members[uidv];if(!m)return '';return m.role==='owner'?'<span class="rl">صاحب</span>':m.role==='admin'?'<span class="rl">مدیر</span>':''}
 function voiceHTML(m){
 const bars=Array.from({length:26},(_,i)=>`<i style="height:${6+((i*37)%18)}px"></i>`).join('');
 return `<div class="voice-card"><button class="vplay" data-act="play-voice" data-mid="${m.id}">${ICO.play}</button>
 <div style="flex:1;min-width:0"><div class="wave" data-wave="${m.id}">${bars}</div>
 <div style="font-size:11.5px;color:var(--txt2)">${fa(Math.floor((m.media.dur||0)/60))}:${fa(String(Math.round((m.media.dur||0)%60)).padStart(2,'0'))}</div></div></div>`;
 }
-function pollHTML(m){
-const p=m.poll;const total=p.opts.reduce((a,o)=>a+o.v.length,0);
-const voted=p.opts.some(o=>o.v.includes(S.me));
-return `<div class="poll-card"><div class="poll-q">${esc(p.q)}</div>
-<div style="font-size:11.5px;color:var(--txt2);margin-bottom:6px">${p.multi?'چندانتخابی':'تک‌انتخابی'}${p.closed?' • پایان یافته':''}</div>
-${p.opts.map((o,i)=>{const pct=total?Math.round(o.v.length/total*100):0;const mine=o.v.includes(S.me);
-return `<div class="poll-opt ${mine?'voted':''}" data-act="vote" data-mid="${m.id}" data-i="${i}">
-${voted||p.closed?`<span class="bar" style="width:${pct}%"></span>`:''}
-<span class="chk">${mine?ICO.check.replace('class="ic"','class="ic" style="width:13px;height:13px"'):''}</span>
-<span class="lbl">${esc(o.t)}</span>${voted||p.closed?`<span class="pct">${fa(pct)}٪</span>`:''}</div>`}).join('')}
-<div class="poll-foot"><span>${fa(total)} رأی</span></div></div>`;
-}
-function linkify(t){
-return esc(t).replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/g,u=>`<a href="${u.startsWith('http')?u:'https://'+u}" target="_blank" rel="noopener">${u}</a>`)
-.replace(/(^|\s)@([a-zA-Z0-9_]{4,32})/g,(mm,sp,un2)=>`${sp}<a href="#" data-act="lookup" data-un="${un2}" onclick="return false">@${un2}</a>`);
-}
 function appendMessage(m,anim){
+renderedMsgIds.add(m.id);
 const c=chatById(state.chatId);if(!c)return;
 const box=document.getElementById('msgs');if(!box)return;
 if(box.querySelector('.empty'))box.innerHTML='';
@@ -1119,7 +1058,7 @@ const grouped=prevM&&prevM.senderId===m.senderId&&m.type!=='system';
 const wrap=document.createElement('div');wrap.innerHTML=msgHTML(m,c,grouped);
 const node=wrap.firstElementChild;box.appendChild(node);
 if(anim&&S.settings.animations)node.style.animation='pop .34s cubic-bezier(.2,.9,.3,1.2) both';
-stickBottom();
+if(state.stick)stickBottom();
 }
 function stickBottom(instant){
 const b=document.getElementById('chatBody');if(!b)return;
@@ -1133,69 +1072,16 @@ function renderInfo(){
 const p=document.getElementById('infoPane');const c=state.chatId?chatById(state.chatId):null;
 if(!c){p.classList.remove('open');return}
 const av=c.type==='saved'?savedAv():chatAvatar(c);
-const mine=isAdmin(c);
-let media=[],files=[],links=[],voices=[];
-c.messages.forEach(m=>{
-if(m.type==='image')media.push(m);if(m.type==='video')media.push(m);
-if(m.type==='file')files.push(m);if(m.type==='voice')voices.push(m);
-if(m.text)(m.text.match(/https?:\/\/[^\s]+/g)||[]).forEach(u=>links.push({u,m}));
-});
-const members=Object.keys(c.members||{}).map(id=>S.users[id]).filter(Boolean);
-p.innerHTML=`<div class="ihead"><button class="icon-btn" data-act="close-info">${ICO.close}</button><h3>اطلاعات</h3>
-<button class="icon-btn" data-act="${mine&&c.type!=='private'&&c.type!=='saved'?'edit-chat':'edit-me'}">${ICO.edit}</button></div>
+p.innerHTML=`<div class="ihead"><button class="icon-btn" data-act="close-info">${ICO.close}</button><h3>اطلاعات</h3></div>
 <div class="ibody">
 <div class="ihero">${avatarHTML(av,104,chatName(c),c.type==='private'&&peerOf(c)&&peerOf(c).online)}
 <h2>${esc(chatName(c))}</h2>
 <div class="st">${c.type==='private'?esc(peerOf(c)?(peerOf(c).online?'آنلاین':relTime(peerOf(c).lastSeen)):''):esc(chatSub(c))}</div>
-${c.username?`<div class="st" style="direction:ltr;color:var(--gold);font-weight:700;margin-top:4px">@${esc(c.username)}</div>`:''}
-${c.about?`<p style="color:var(--txt2);font-size:13.5px;margin:10px 16px 0">${esc(c.about)}</p>`:''}
 </div>
-<div class="iacts">
-${c.type==='private'?`<button class="iact" data-act="call" data-kind="voice">${ICO.phone}تماس</button><button class="iact" data-act="call" data-kind="video">${ICO.video}تصویری</button>`:''}
-<button class="iact" data-act="mute-chat" data-id="${c.id}">${ICO.mute}${c.muted?'صدادار':'بی‌صدا'}</button>
-<button class="iact" data-act="chat-search">${ICO.search}جستجو</button>
-${c.type!=='saved'?`<button class="iact" data-act="copy-invite">${ICO.link}لینک دعوت</button>`:''}
-</div>
-<div class="mtabs">
-${[['media','رسانه'],['files','فایل‌ها'],['voice','صوتی'],['links','پیوندها'],(c.type==='group'||c.type==='channel')?['members','اعضا']:null].filter(Boolean)
-.map(([k,n])=>`<button class="tab ${infoTab===k?'on':''}" data-act="info-tab" data-k="${k}">${n}</button>`).join('')}
-</div>
-${infoTab==='media'?mediaGrid(media):''}
-${infoTab==='files'?(files.length?files.map(m=>`<div class="irow" data-act="download" data-mid="${m.id}"><span class="ic">${ICO.file}</span><div class="rc"><div class="rl">${esc(m.media.name)}</div><div class="rs">${fSize(m.media.size)}</div></div></div>`).join(''):`<div class="empty" style="padding:40px">${ICO.file} فایلی وجود ندارد</div>`):''}
-${infoTab==='voice'?(voices.length?voices.map(m=>`<div class="irow" data-act="jump-msg" data-id="${c.id}" data-mid="${m.id}"><span class="ic">${ICO.mic}</span><div class="rc"><div class="rl">پیام صوتی</div><div class="rs">${listTime(m.createdAt)}</div></div></div>`).join(''):`<div class="empty" style="padding:40px">${ICO.mic} صوتی نیست</div>`):''}
-${infoTab==='links'?(links.length?[...new Map(links.map(l=>[l.u,l])).values()].map(l=>`<div class="irow" data-act="open-link" data-u="${esc(l.u)}"><span class="ic">${ICO.link}</span><div class="rc"><div class="rl" style="direction:ltr;font-size:13px">${esc(l.u.slice(0,48))}</div><div class="rs">${listTime(l.m.createdAt)}</div></div></div>`).join(''):`<div class="empty" style="padding:40px">${ICO.link} پیوندی نیست</div>`):''}
-${infoTab==='members'?membersHTML(c,members,mine):''}
-${(c.type==='group'||c.type==='channel')&&mine?permsHTML(c):''}
 <div class="sec-title">عملیات</div>
-${c.type!=='saved'?`<div class="irow" data-act="pin-chat" data-id="${c.id}"><span class="ic">${ICO.pin}</span><div class="rc"><div class="rl">${c.pinned?'برداشتن سنجاق':'سنجاق کردن'}</div></div></div>
-<div class="irow" data-act="${c.archived?'unarchive-chat':'archive-chat'}" data-id="${c.id}"><span class="ic">${ICO.archive}</span><div class="rc"><div class="rl">${c.archived?'خروج از آرشیو':'آرشیو'}</div></div></div>`:''}
 <div class="irow" data-act="clear-history" data-id="${c.id}"><span class="ic">${ICO.trash}</span><div class="rc"><div class="rl">پاک کردن تاریخچه</div></div></div>
-${c.type==='private'&&peerOf(c)?`<div class="irow danger" data-act="block-user" data-id="${peerOf(c).id}"><span class="ic">${ICO.ban}</span><div class="rc"><div class="rl">${peerOf(c).blocked?'رفع مسدودی':'مسدود کردن کاربر'}</div></div></div>`:''}
-${c.type!=='saved'?`<div class="irow danger" data-act="leave-chat" data-id="${c.id}"><span class="ic">${ICO.out}</span><div class="rc"><div class="rl">${isOwner(c)?'حذف گفتگو':(c.type==='channel'?'لغو عضویت':'خروج')}</div></div></div>`:''}
-<div style="height:24px"></div>
-</div>`;
+<div style="height:24px"></div></div>`;
 p.classList.toggle('open',state.infoOpen);
-}
-function mediaGrid(arr){
-if(!arr.length)return `<div class="empty" style="padding:40px">${ICO.img} رسانه‌ای نیست</div>`;
-return `<div class="mgrid">${arr.slice().reverse().map(m=>m.type==='video'?`<video src="${m.media.src}" data-act="lightbox" data-src="${m.media.src}" muted style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer"></video>`:`<img src="${m.media.src}" data-act="lightbox" data-src="${m.media.src}" loading="lazy">`).join('')}</div>`;
-}
-function membersHTML(c,members,mine){
-return `<div style="padding:8px 0">
-${mine?`<div class="mrow" data-act="add-member" style="margin:0 8px"><div class="avatar" style="width:44px;height:44px;font-size:20px;background:var(--ggrad)">+</div><div class="rc"><div class="rn">افزودن عضو</div></div></div>`:''}
-${members.sort((a,b)=>{const ra=(c.members[a.id]||{}).role,rb=(c.members[b.id]||{}).role;const o={owner:0,admin:1,member:2};return (o[ra]||2)-(o[rb]||2)}).map(u=>{
-const role=(c.members[u.id]||{}).role||'member';
-return `<div class="mem" data-act="member-menu" data-id="${u.id}">${avatarHTML(u.avatar,44,u.name,u.online)}
-<div class="mc"><div class="mn">${esc(u.name)} ${role!=='member'?`<span class="role-tag">${role==='owner'?'صاحب':'مدیر'}</span>`:''} ${u.id===S.me?'<span class="role-tag" style="background:var(--bg4);color:var(--txt2)">شما</span>':''}</div>
-<div class="ms">${u.online?'آنلاین':relTime(u.lastSeen)}</div></div>
-<span style="color:var(--txt3)">${ICO.dots}</span></div>`}).join('')}
-</div>`;
-}
-function permsHTML(c){
-const p=c.permissions||{};
-const defs=[['send','ارسال پیام'],['media','ارسال رسانه'],['polls','نظرسنجی'],['addMembers','افزودن عضو'],['pin','سنجاق پیام']];
-return `<div class="sec-title">دسترسی‌های اعضا</div>`+defs.map(([k,l])=>`<div class="perm"><div class="pc"><div class="pn">${l}</div></div>
-<button class="switch ${p[k]===false?'':'on'}" data-act="perm" data-k="${k}"></button></div>`).join('');
 }
 /* ============ ACTIONS ============ */
 function openChat(id){
@@ -1210,7 +1096,7 @@ function startPrivateChat(userId){
 const id='p_'+[S.me,userId].sort().join('_');
 let c=S.chats[id];
 if(!c){c={id,type:'private',peerId:userId,members:{[S.me]:true,[userId]:true},messages:[],unread:0,muted:false,pinned:false,archived:false,createdAt:Date.now()};S.chats[id]=c}
-if(S.users[userId])S.users[userId].contact=true;
+if(S.users[userId]){S.users[userId].known=true;S.users[userId].contact=true;}
 DB.save();
 if(RTDB&&FB_OK)R('chats/'+id).transaction(cur=>{
 if(cur===null)return{type:'private',peerId:userId,members:{[S.me]:true,[userId]:true},createdAt:c.createdAt,title:'',username:''};
@@ -1225,8 +1111,7 @@ const c=chatById(state.chatId);if(!c)return;
 if(state.editId){const m=findMsg(state.editId);if(m){m.text=txt;m.editedAt=Date.now();state.editId=null;DB.save();ta.value='';
 if(RTDB&&!c.id.startsWith('saved_'))R('messages/'+c.id+'/'+m.id).update({text:txt,editedAt:m.editedAt});
 renderMessages();renderComposerBanner();renderList()}return}
-const onlyEmoji=/^(\p{Extended_Pictographic}|\s|️){1,4}$/u.test(txt)&&txt.length<=10;
-pushMsg(c,{type:onlyEmoji?'sticker':'text',text:txt});
+pushMsg(c,{type:'text',text:txt});
 ta.value='';ta.style.height='auto';document.getElementById('sendBtn').innerHTML=ICO.mic;document.getElementById('sendBtn').dataset.act='start-rec';
 state.replyTo=null;renderComposerBanner();renderList();
 }
@@ -1244,7 +1129,6 @@ const on=(c.type==='private'&&S.settings.notifPrivate)||(c.type==='group'&&S.set
 if(!on)return;
 toast(`${chatName(c)}: ${(m.text||'پیام').slice(0,40)}`);
 if(S.settings.sounds)beep();
-if(S.settings.desktop&&Notification&&Notification.permission==='granted')new Notification(chatName(c),{body:(m.text||'پیام').slice(0,90)});
 }
 function beep(){try{const ac=new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.value=.05;o.start();o.frequency.exponentialRampToValueAtTime(1320,ac.currentTime+.09);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.25);o.stop(ac.currentTime+.26)}catch(e){}}
 /* ============ MEDIA ============ */
@@ -1263,9 +1147,9 @@ pushMsg(c,{type:'image',media:{src:d.src,w:d.w,h:d.h,name:f.name,size:f.size}});
 }
 async function handleFile(f){
 const c=chatById(state.chatId);if(!c)return;
-if(f.size>1.5*1024*1024){toast('حجم فایل زیاد است (حداکثر ۱٫۵ مگابایت)','err');return}
+if(f.size>1.5*1024*1024){toast('حجم فایل زیاد است','err');return}
 const src=await fileToDataURL(f);
-pushMsg(c,{type:f.type.startsWith('video/')?'video':'file',media:{src,name:f.name,size:f.size,mime:f.type}});renderList();
+pushMsg(c,{type:'file',media:{src,name:f.name,size:f.size,mime:f.type}});renderList();
 }
 let rec=null,recChunks=[],recStart=0,recTimer=null;
 async function startRec(){
@@ -1302,11 +1186,10 @@ foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button>
 onMount:ov=>{document.getElementById('cfmYes',ov).onclick=()=>{closeModal(ov);onYes()}}});
 }
 function promptBox(title,fields,onOk,okLabel='تأیید'){
-const body=fields.map(f=>`<div class="field"><label>${f.label}</label>${f.type==='textarea'?`<textarea class="inp" id="f_${f.k}" rows="3" placeholder="${esc(f.ph||'')}">${esc(f.v||'')}</textarea>`:f.type==='file'?`<div style="display:flex;gap:10px;align-items:center"><div id="f_${f.k}_prev">${avatarHTML(f.av,64,f.v||'?')}</div><label class="btn btn-ghost btn-sm" for="f_${f.k}_file" style="cursor:pointer">${ICO.img} انتخاب تصویر</label><input type="file" accept="image/*" id="f_${f.k}_file" class="hidden"></div>`:`<input class="inp" id="f_${f.k}" type="${f.type||'text'}" maxlength="${f.max||60}" value="${esc(f.v||'')}" placeholder="${esc(f.ph||'')}" ${f.dir==='ltr'?'style="direction:ltr;text-align:left"':''}>`}</div>${f.hint?`<div style="font-size:11.5px;color:var(--txt3);margin:-8px 0 12px">${f.hint}</div>`:''}`).join('');
+const body=fields.map(f=>`<div class="field"><label>${f.label}</label>${f.type==='textarea'?`<textarea class="inp" id="f_${f.k}" rows="3" placeholder="${esc(f.ph||'')}">${esc(f.v||'')}</textarea>`:`<input class="inp" id="f_${f.k}" type="${f.type||'text'}" maxlength="${f.max||60}" value="${esc(f.v||'')}" placeholder="${esc(f.ph||'')}" ${f.dir==='ltr'?'style="direction:ltr;text-align:left"':''}>`}</div>`).join('');
 return modal({title,body,foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="okBtn">${okLabel}</button>`,
 onMount:ov=>{
-fields.filter(f=>f.type==='file').forEach(f=>{const inp=document.getElementById('f_'+f.k+'_file',ov);inp.onchange=async e=>{const file=e.target.files[0];if(!file)return;const d=await compressImage(file,320,.8);f._src=d.src;document.getElementById('f_'+f.k+'_prev',ov).innerHTML=avatarHTML({src:d.src},64,f.v||'?')}});
-document.getElementById('okBtn',ov).onclick=()=>{const vals={};for(const f of fields){vals[f.k]=f.type==='file'?(f._src||null):(document.getElementById('f_'+f.k,ov).value||'').trim()}
+document.getElementById('okBtn',ov).onclick=()=>{const vals={};for(const f of fields){vals[f.k]=(document.getElementById('f_'+f.k,ov).value||'').trim()}
 if(onOk(vals,ov)!==false)closeModal(ov)};
 setTimeout(()=>{const fi=ov.querySelector('input,textarea');fi&&fi.focus()},120)}});
 }
@@ -1315,61 +1198,43 @@ function newPrivateModal(){
 modal({title:'گفتگوی جدید',icon:ICO.search,
 body:`<div class="search-box" style="margin-bottom:14px">${ICO.search}<input id="npQ" placeholder="یوزرنیم را با @ یا بدون @ وارد کنید…" style="direction:ltr"></div>
 <div id="npRes"></div>
-<div class="note" style="margin-top:12px">جستجو مستقیم از دیتابیس انجام می‌شود.</div>`,
+<div class="note" style="margin-top:12px">فقط کاربرانی که یوزرنیمشان را بدانید قابل جستجو هستند.</div>`,
 onMount:ov=>{const q=document.getElementById('npQ',ov),r=document.getElementById('npRes',ov);
-const run=async()=>{const v=q.value.trim();if(!v){r.innerHTML=`<div class="sec-title">مخاطبین</div>`+(Object.values(S.users).filter(u=>u.contact&&u.id!==S.me).map(u=>rowU(u)).join('')||`<p style="color:var(--txt2);font-size:13px;padding:0 8px">مخاطبی ندارید — یوزرنیم را بالا جستجو کنید.</p>`);return}
+const run=async()=>{const v=q.value.trim();if(!v){r.innerHTML=`<div class="sec-title">مخاطبین</div>`+(Object.values(S.users).filter(u=>u.known&&u.id!==S.me).map(u=>rowU(u)).join('')||`<p style="color:var(--txt2);font-size:13px;padding:0 8px">مخاطبی ندارید — یوزرنیم را بالا جستجو کنید.</p>`);return}
 const n=norm(v);
-const users=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(v.toLowerCase())));
-const chats=Object.values(S.chats).filter(c=>(c.type==='group'||c.type==='channel')&&((c.title||'').toLowerCase().includes(v.toLowerCase())||(c.username&&norm(c.username).includes(n))));
-let extra='';
-if(!users.length&&validUn(n)&&RTDB&&FB_OK){
-try{
-const snap=await R('usernames/'+n).once('value');
-if(snap.exists()){
-const us=await R('users/'+snap.val().uid).once('value');
-const u=us.val();if(u){u.id=snap.val().uid;S.users[u.id]=Object.assign(S.users[u.id]||{},u,{id:u.id});DB.save();extra=rowU(u)}
-}
-}catch(e){}
-}
-r.innerHTML=(users.length?`<div class="sec-title">کاربران</div>`+users.map(u=>rowU(u)).join('')+extra:'')+
-(chats.length?`<div class="sec-title">گروه‌ها و کانال‌ها</div>`+chats.map(c=>`<div class="mrow" data-act="open-chat" data-id="${c.id}">${avatarHTML(c.avatar,46,c.title)}<div class="rc"><div class="rn">${esc(c.title)}</div><div class="rs">${c.username?'@'+esc(c.username):chatSub(c)}</div></div></div>`).join(''):'')+
-(!users.length&&!chats.length&&!extra?`<div class="mrow" data-act="lookup" data-un="${esc(n)}">${avatarHTML({col:['#f7e8ab','#a89018']},46,'@')}<div class="rc"><div class="rn">یوزرنیم «${esc(n)}» پیدا نشد</div></div></div>`:'')};
-q.oninput=run;run();q.focus();
+const users=Object.values(S.users).filter(u=>u.id!==S.me&&u.known&&!u.blocked&&(norm(u.username)===n||norm(u.username).includes(n)||u.name.toLowerCase().includes(v.toLowerCase())));
+r.innerHTML=(users.length?`<div class="sec-title">کاربران</div>`+users.map(u=>rowU(u)).join(''):'')+
+(!users.length&&validUn(n)?`<div class="mrow" data-act="lookup" data-un="${esc(n)}">${avatarHTML({col:['#f7e8ab','#a89018']},46,'@')}<div class="rc"><div class="rn">جستجوی «${esc(n)}» در دیتابیس</div></div></div>`:'')};
+let debounce;
+q.oninput=()=>{clearTimeout(debounce);debounce=setTimeout(run,400)};run();q.focus();
 function rowU(u){return `<div class="mrow" data-act="start-private" data-id="${u.id}">${avatarHTML(u.avatar,46,u.name,u.online)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)} • ${u.online?'آنلاین':relTime(u.lastSeen)}</div></div></div>`}}});
 }
 function newGroupModal(){
 modal({title:'گروه جدید',icon:ICO.group,wide:true,
-body:`<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
-<label for="grpAv" style="cursor:pointer" id="grpAvPrev">${avatarHTML(null,74,'گروه')}</label><input type="file" id="grpAv" accept="image/*" class="hidden">
-<div style="flex:1"><div class="field"><label>نام گروه</label><input class="inp" id="grpName" maxlength="60" placeholder="مثلاً: دوستان دانشگاه"></div></div></div>
-<div class="field"><label>یوزرنیم گروه (اختیاری)</label><div class="uname-wrap"><span>@</span><input id="grpUn" maxlength="32" placeholder="my_group"></div></div>
-<div class="field"><label>توضیحات (اختیاری)</label><textarea class="inp" id="grpAbout" rows="2" maxlength="140"></textarea></div>
-<div class="search-box" style="margin:12px 0 8px">${ICO.search}<input id="grpQ" placeholder="افزودن اعضا"></div>
+body:`<div class="field"><label>نام گروه</label><input class="inp" id="grpName" maxlength="60" placeholder="مثلاً: دوستان دانشگاه"></div>
+<div class="search-box" style="margin:12px 0 8px">${ICO.search}<input id="grpQ" placeholder="افزودن اعضا (مخاطبین)"></div>
 <div id="grpList" style="max-height:220px;overflow-y:auto"></div>`,
 foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="grpOk">ساخت گروه</button>`,
 onMount:ov=>{
-let av=null;const sel=new Set();
-document.getElementById('grpAv',ov).onchange=async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);av={src:d.src};document.getElementById('grpAvPrev',ov).innerHTML=avatarHTML(av,74,'گ')};
+const sel=new Set();
 const list=document.getElementById('grpList',ov),q=document.getElementById('grpQ',ov);
 const render=()=>{const v=norm(q.value);
-const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
-list.innerHTML=arr.length?arr.map(u=>`<div class="mrow ${sel.has(u.id)?'on':''}" data-sel="${u.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="color:var(--txt2);font-size:13px;text-align:center;padding:14px">کاربری پیدا نشد.</p>`;
+const arr=Object.values(S.users).filter(u=>u.id!==S.me&&u.known&&!u.blocked&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
+list.innerHTML=arr.length?arr.map(u=>`<div class="mrow ${sel.has(u.id)?'on':''}" data-sel="${u.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="color:var(--txt2);font-size:13px;text-align:center;padding:14px">مخاطبی پیدا نشد.</p>`;
 list.querySelectorAll('[data-sel]').forEach(el2=>el2.onclick=()=>{const id=el2.dataset.sel;sel.has(id)?sel.delete(id):sel.add(id);render()})};
 q.oninput=render;render();
 document.getElementById('grpOk',ov).onclick=()=>{
 const name=document.getElementById('grpName',ov).value.trim();if(name.length<2)return toast('نام گروه را وارد کنید','err');
-const un=norm(document.getElementById('grpUn',ov).value);
-if(un&&(!validUn(un)||Object.values(S.chats).some(c=>c.username&&norm(c.username)===un)))return toast('یوزرنیم نامعتبر یا تکراری','err');
-createGroup({name,username:un,about:document.getElementById('grpAbout',ov).value.trim(),avatar:av,members:[...sel]});closeModal(ov)}}});
+createGroup({name,members:[...sel]});closeModal(ov)}}});
 }
-function createGroup({name,username,about,avatar,members}){
+function createGroup({name,members}){
 const id=uid('c');const mem={};mem[S.me]={role:'owner',joined:Date.now()};
-members.forEach(u=>{mem[u]={role:'member',joined:Date.now()};if(S.users[u])S.users[u].contact=true});
+members.forEach(u=>{mem[u]={role:'member',joined:Date.now()};if(S.users[u])S.users[u].known=true});
 const cols=AVCOLS[Math.floor(Math.random()*AVCOLS.length)];
-S.chats[id]={id,type:'group',title:name,username:username||'',about:about||'',avatar:avatar||{col:cols},members:mem,messages:[],
+S.chats[id]={id,type:'group',title:name,username:'',about:'',avatar:{col:cols},members:mem,messages:[],
 pinnedIds:[],unread:0,muted:false,pinned:false,archived:false,invite:uid('inv').slice(-8),createdAt:Date.now(),
-permissions:{send:true,media:true,polls:true,addMembers:true,pin:true,info:false},createdBy:S.me};
-if(RTDB&&FB_OK)R('chats/'+id).set({type:'group',title:name,username:username||'',about:about||'',avatar:avatar||{col:cols},members:mem,
+permissions:{send:true},createdBy:S.me};
+if(RTDB&&FB_OK)R('chats/'+id).set({type:'group',title:name,username:'',about:'',avatar:{col:cols},members:mem,
 invite:S.chats[id].invite,createdAt:S.chats[id].createdAt,permissions:S.chats[id].permissions,createdBy:S.me});
 pushSystem(id,`گروه «${name}» ساخته شد`);DB.save();state.section='chats';openChat(id);renderAll();toast('گروه ساخته شد ✨');
 }
@@ -1379,146 +1244,140 @@ const m={id:uid('m'),chatId,type:'system',text,senderId:S.me,createdAt:Date.now(
 c.messages.push(m);DB.save();Backend.sendMessage(chatId,m);
 if(state.chatId===chatId)appendMessage(m,true);
 }
-function newChannelModal(){
-modal({title:'کانال جدید',icon:ICO.mega,wide:true,
-body:`<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
-<label for="chAv" style="cursor:pointer" id="chAvPrev">${avatarHTML({col:['#c9f0ff','#3a86b8']},74,'ک')}</label><input type="file" id="chAv" accept="image/*" class="hidden">
-<div style="flex:1"><div class="field"><label>نام کانال</label><input class="inp" id="chName" maxlength="60" placeholder="مثلاً: اخبار فناوری"></div></div></div>
-<div class="field"><label>نوع کانال</label>
-<div style="display:flex;gap:8px;margin-top:6px"><button type="button" class="opt-pill on" data-kind="public">عمومی (با یوزرنیم)</button><button type="button" class="opt-pill" data-kind="private">خصوصی (با لینک)</button></div></div>
-<div class="field" id="chUnField"><label>یوزرنیم کانال</label><div class="uname-wrap"><span>@</span><input id="chUn" maxlength="32" placeholder="nexo_news"></div></div>
-<div class="field"><label>توضیحات</label><textarea class="inp" id="chAbout" rows="2" maxlength="140"></textarea></div>`,
-foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="chOk">ایجاد کانال</button>`,
-onMount:ov=>{
-let av=null,kind='public';
-ov.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ov.querySelectorAll('[data-kind]').forEach(x=>x.classList.remove('on'));b.classList.add('on');kind=b.dataset.kind;document.getElementById('chUnField',ov).style.display=kind==='public'?'':'none'});
-document.getElementById('chAv',ov).onchange=async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);av={src:d.src};document.getElementById('chAvPrev',ov).innerHTML=avatarHTML(av,74,'ک')};
-document.getElementById('chOk',ov).onclick=()=>{
-const name=document.getElementById('chName',ov).value.trim();if(name.length<2)return toast('نام کانال را وارد کنید','err');
-const un=kind==='public'?norm(document.getElementById('chUn',ov).value):'';
-if(kind==='public'){if(!validUn(un))return toast('یوزرنیم کانال نامعتبر است','err');
-if(Object.values(S.chats).some(c=>c.username&&norm(c.username)===un))return toast('این یوزرنیم قبلاً استفاده شده','err')}
-const id=uid('c');const mem={};mem[S.me]={role:'owner',joined:Date.now()};
-const inv=uid('inv').slice(-8);
-S.chats[id]={id,type:'channel',title:name,username:un,about:document.getElementById('chAbout',ov).value.trim(),avatar:av||{col:['#c9f0ff','#3a86b8']},
-members:mem,messages:[],pinnedIds:[],unread:0,muted:false,pinned:false,archived:false,kind,
-invite:inv,createdAt:Date.now(),createdBy:S.me,permissions:{}};
-if(RTDB&&FB_OK)R('chats/'+id).set({type:'channel',kind,title:name,username:un,about:S.chats[id].about,avatar:S.chats[id].avatar,members:mem,invite:inv,createdAt:S.chats[id].createdAt,createdBy:S.me,permissions:{}});
-pushSystem(id,`کانال «${name}» ایجاد شد`);DB.save();closeModal(ov);state.section='chats';openChat(id);renderAll();toast('کانال آماده است 📣')}}});
-}
-function joinByLinkModal(){
-promptBox('پیوستن با لینک دعوت',[{k:'link',label:'لینک دعوت',ph:'nexo.app/join/xxxxx',dir:'ltr'}],v=>{
-const tok=(v.link.split('/').pop()||'').trim();
-const c=Object.values(S.chats).find(x=>x.invite===tok);
-if(!c)return toast('لینک معتبری پیدا نشد','err'),false;
-if(!c.members[S.me]){c.members[S.me]={role:'member',joined:Date.now()};pushSystem(c.id,me().name+' پیوست');DB.save();
-if(RTDB&&FB_OK)R('chats/'+c.id+'/members/'+S.me).set({role:'member',joined:Date.now()})}
-openChat(c.id);renderAll();toast('عضو شدید ✅')},'پیوستن');
-}
 /* ============ PROFILE ============ */
 function editMeModal(){
 const u=me();
 promptBox('ویرایش پروفایل',[
 {k:'name',label:'نام نمایشی',v:u.name,max:40},
-{k:'username',label:'یوزرنیم',v:u.username,dir:'ltr',max:32,hint:'۵ تا ۳۲ حرف انگلیسی، عدد و _'},
-{k:'bio',label:'درباره من',v:u.bio,type:'textarea',max:140},
-{k:'av',label:'تصویر پروفایل',type:'file',v:u.name,av:u.avatar}
+{k:'bio',label:'درباره من',v:u.bio,type:'textarea',max:140}
 ],v=>{
 if(v.name.length<2)return toast('نام کوتاه است','err'),false;
-const un=norm(v.username);
-if(!validUn(un))return toast('یوزرنیم نامعتبر','err'),false;
-if(Object.values(S.users).some(x=>x.id!==S.me&&!x.demo&&norm(x.username)===un))return toast('یوزرنیم تکراری','err'),false;
-const oldUn=u.username;
-u.name=v.name;u.username=un;u.bio=v.bio;if(v.av)u.avatar={src:v.av};
+u.name=v.name;u.bio=v.bio;
 DB.save();
-if(RTDB&&FB_OK){
-R('users/'+S.me).update({name:u.name,username:un,bio:u.bio,avatar:u.avatar});
-if(un!==oldUn){
-R('usernames/'+un).transaction(cur=>cur===null?{uid:S.me}:undefined,false,false).catch(()=>{});
-R('usernames/'+oldUn).remove();
-}
-}
+if(RTDB&&FB_OK){R('users/'+S.me).update({name:u.name,bio:u.bio});}
 renderAll();toast('پروفایل به‌روزرسانی شد ✅')},'ذخیره');
 }
-function editChatModal(id){
-const c=chatById(id);if(!c)return;
-const isCh=c.type==='channel';
-promptBox(isCh?'ویرایش کانال':'ویرایش گروه',[
-{k:'title',label:isCh?'نام کانال':'نام گروه',v:c.title,max:60},
-{k:'username',label:'یوزرنیم عمومی',v:c.username||'',dir:'ltr',max:32,hint:'خالی بگذارید تا خصوصی بماند'},
-{k:'about',label:'توضیحات',v:c.about||'',type:'textarea',max:140},
-{k:'av',label:'تصویر',type:'file',v:c.title,av:c.avatar}
-],v=>{
-if(v.title.length<2)return toast('نام را وارد کنید','err'),false;
-const un=norm(v.username);
-if(un&&(!validUn(un)||Object.values(S.chats).some(x=>x.id!==id&&x.username&&norm(x.username)===un)))return toast('یوزرنیم نامعتبر یا تکراری','err'),false;
-c.title=v.title;c.username=un;c.about=v.about;if(v.av)c.avatar={src:v.av};
+/* ============ SEARCH / LOOKUP ============ */
+async function lookupUsername(raw){
+const n=norm(raw);if(!n)return;
+toast('در حال جستجوی @'+n+'…');
+const c=Object.values(S.chats).find(x=>x.username&&norm(x.username)===n);
+if(c){openChat(c.id);return}
+if(RTDB&&FB_OK){
+try{
+const snap=await R('usernames/'+n).once('value');
+if(snap.exists()){
+const us=await R('users/'+snap.val().uid).once('value');
+const u=us.val();if(u){u.id=snap.val().uid;u.known=true;S.users[u.id]=Object.assign(S.users[u.id]||{},u,{id:u.id,known:true});DB.save();startPrivateChat(u.id);return}
+}
+}catch(e){console.error(e)}
+}
+toast('کاربری با یوزرنیم @'+n+' پیدا نشد','err');
+}
+/* ============ EVENT DISPATCH ============ */
+document.addEventListener('click',ev=>{
+const t=ev.target.closest('[data-act]');if(!t)return;
+const a=t.dataset.act;ev.stopPropagation();
+switch(a){
+case 'logo':state.section='chats';state.chatId=null;unsubscribeMessages();renderAll();break;
+case 'nav':state.section=t.dataset.k;if(t.dataset.k==='search')state.focusSearch=true;renderRail();renderList();break;
+case 'settings-go':state.settingsPage=t.dataset.k;renderList();break;
+case 'settings-back':state.settingsPage='main';renderList();break;
+case 'toggle-theme':setTheme(S.settings.theme==='dark'?'light':'dark');break;
+case 'set-theme':setTheme(t.dataset.v);break;
+case 'set-toggle':S.settings[t.dataset.key]=!S.settings[t.dataset.key];DB.save();applyTheme();renderList();break;
+case 'set-select':selectSetting(t.dataset.key);break;
+case 'folder':state.folder=t.dataset.id;renderList();break;
+case 'open-chat':closeMenu();openChat(t.dataset.id);break;
+case 'close-chat':closeChat();break;
+case 'start-private':closeMenu();closeModal();startPrivateChat(t.dataset.id);break;
+case 'open-user':closeMenu();openUserProfile(t.dataset.id);break;
+case 'lookup':closeMenu();closeModal();lookupUsername(t.dataset.un);break;
+case 'new-menu':newMenu(t);break;
+case 'new-private':closeMenu();closeModal();state.section='chats';renderRail();renderList();newPrivateModal();break;
+case 'new-group':closeMenu();closeModal();newGroupModal();break;
+case 'new-story':closeMenu();closeModal();newStoryModal();break;
+case 'view-story':closeMenu();openStoryViewer(t.dataset.id);break;
+case 'chat-menu':closeMenu();chatMenu(t.dataset.id||state.chatId,t);break;
+case 'send-msg':sendText();break;
+case 'start-rec':startRec();break;
+case 'stop-rec':stopRec(false);break;
+case 'cancel-rec':stopRec(true);break;
+case 'attach-menu':attachMenu(t);break;
+case 'att-img':closeMenu();document.getElementById('fileImg').click();break;
+case 'att-file':closeMenu();document.getElementById('fileAny').click();break;
+case 'emoji-open':togglePicker();break;
+case 'emoji-close':togglePicker(false);break;
+case 'open-info':state.infoOpen=true;closeMenu();renderInfo();break;
+case 'close-info':state.infoOpen=false;renderInfo();break;
+case 'lightbox':closeMenu();lightbox(t.dataset.src);break;
+case 'edit-me':editMeModal();break;
+case 'copy-un':copyText('@'+me().username);break;
+case 'clear-history':closeMenu();confirmBox('پاک کردن تاریخچه','همه پیام‌ها حذف شود؟',()=>{
+const cc=chatById(t.dataset.id||state.chatId);cc.messages=[];cc.pinnedIds=[];DB.save();
+if(RTDB&&FB_OK&&!cc.id.startsWith('saved_')){R('messages/'+cc.id).remove();}
+renderChat();renderList();toast('تاریخچه پاک شد')},'پاک کردن');break;
+case 'switch-account':confirmBox('خروج از حساب','با خروج، از حساب خارج می‌شوید.',()=>{
+if(RTDB&&S.me)R('users/'+S.me+'/online').set(false);
+S.me=null;DB.save();location.reload()},'خروج');break;
+case 'delete-account':confirmBox('حذف حساب','حساب شما از دیتابیس حذف می‌شود.',()=>{
+const u=me();
+if(u&&RTDB){R('users/'+S.me).remove();R('usernames/'+u.username).remove()}
+localStorage.removeItem(KEY);location.reload()},'حذف دائمی');break;
+case 'show-blocked':showBlocked();break;
+case 'storage-info':storageInfo();break;
+case 'export-data':{const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+const an=document.createElement('a');an.href=URL.createObjectURL(blob);an.download='nexo-backup.json';an.click();toast('فایل پشتیبان دانلود شد');break}
+case 'reset-all':confirmBox('بازنشانی','همه داده‌های محلی پاک شوند؟',()=>{
+S.chats={};S.chats['saved_'+S.me]={id:'saved_'+S.me,type:'saved',messages:[],unread:0,createdAt:Date.now()};S.folders=[];DB.save();renderAll();toast('بازنشانی انجام شد')},'بازنشانی');break;
+case 'about-info':modal({title:'درباره Nexo',icon:ICO.info,body:`<div style="text-align:center;padding:8px"><div style="width:78px;margin:0 auto 12px">${LOGO}</div>
+<h2 class="gold-t" style="margin:0 0 4px;font-size:30px">NEXO</h2><p style="color:var(--txt2);margin:0 0 16px">نسخه ${fa('2.0')} — متصل به Firebase Realtime Database</p></div>`});break;
+case 'about-feat':modal({title:'قابلیت‌های Nexo',icon:ICO.star,body:['حریم خصوصی کامل — کاربران فقط با جستجو پیدا می‌شوند','چت‌ها کاملاً خصوصی','پیام‌ها در لحظه مثل تلگرام','گروه با مدیر','استوری ۲۴ ساعته'].map(x=>`<div class="mrow" style="cursor:default"><span style="color:var(--gold)">${ICO.check}</span><div class="rc"><div class="rn" style="font-size:13.5px;font-weight:600">${x}</div></div></div>`).join('')});break;
+case 'close-modal':closeModal();break;
+case 'block-user':{const uid2=t.dataset.id;toggleBlock(uid2);break}
+case 'play-voice':playVoice(t.dataset.mid,t);break;
+}
+});
+/* ============ BLOCK ============ */
+async function toggleBlock(userId){
+const u=S.users[userId];if(!u)return;
+u.blocked=!u.blocked;
 DB.save();
-if(RTDB&&FB_OK)R('chats/'+id).update({title:c.title,username:un,about:c.about,avatar:c.avatar});
-renderAll();toast('به‌روزرسانی شد ✅')},'ذخیره');
+if(RTDB&&FB_OK){
+try{
+if(u.blocked){await R('users/'+S.me+'/blocked/'+userId).set(true);}
+else{await R('users/'+S.me+'/blocked/'+userId).remove();}
+}catch(e){console.error('Block sync error:',e)}
 }
-function addMemberModal(id){
+closeMenu();closeModal();renderAll();
+toast(u.blocked?'🔕 کاربر مسدود شد':'✅ مسدودی رفع شد');
+}
+function showBlocked(){
+const arr=Object.values(S.users).filter(u=>u.blocked);
+modal({title:'کاربران مسدود',icon:ICO.ban,body:arr.length?arr.map(u=>`<div class="mrow"><div style="flex:1;display:flex;gap:10px;align-items:center">${avatarHTML(u.avatar,42,u.name)}<div><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div></div><button class="btn btn-ghost btn-sm" data-act="block-user" data-id="${u.id}">رفع مسدودی</button></div>`).join(''):`<p style="text-align:center;color:var(--txt2);padding:20px">هیچ کاربری مسدود نشده است.</p>`});
+}
+function storageInfo(){
+const size=(localStorage.getItem(KEY)||'').length;
+modal({title:'مصرف حافظه',icon:ICO.db,body:`<div style="text-align:center;padding:20px"><div class="gold-t" style="font-size:24px;font-weight:800">${fSize(size)}</div><div style="color:var(--txt2);margin-top:8px">حجم داده‌های محلی</div></div>`});
+}
+function setTheme(v){S.settings.theme=v;DB.save();applyTheme();renderRail();renderList();toast(v==='dark'?'تم مشکی و طلایی فعال شد 🖤':'تم سفید و طلایی فعال شد 🤍')}
+function newMenu(anchor){
+menuAt(anchor,`<button class="mi" data-act="new-private">${ICO.chat} گفتگوی جدید</button>
+<button class="mi" data-act="new-group">${ICO.group} گروه جدید</button>
+<button class="mi" data-act="new-story">${ICO.story} استوری جدید</button>
+<div class="msep"></div>
+<button class="mi" data-act="open-chat" data-id="saved_${S.me}">${ICO.save} پیام‌های ذخیره‌شده</button>`);
+}
+function attachMenu(anchor){
+menuAt(anchor,`<button class="mi" data-act="att-img">${ICO.img} عکس</button>
+<button class="mi" data-act="att-file">${ICO.file} فایل</button>
+<div class="msep"></div><button class="mi" data-act="att-sticker">${ICO.smile} ایموجی</button>`);
+}
+function chatMenu(id,anchor){
 const c=chatById(id);if(!c)return;
-modal({title:'افزودن عضو',icon:ICO.users,
-body:`<div class="search-box" style="margin-bottom:12px">${ICO.search}<input id="amQ" placeholder="یوزرنیم یا نام مخاطب"></div><div id="amList"></div>`,
-onMount:ov=>{const q=document.getElementById('amQ',ov),l=document.getElementById('amList',ov);
-const run=()=>{const v=norm(q.value);
-const arr=Object.values(S.users).filter(u=>u.id!==S.me&&!u.blocked&&!c.members[u.id]&&(!v||norm(u.username).includes(v)||u.name.toLowerCase().includes(q.value.toLowerCase())));
-l.innerHTML=arr.length?arr.map(u=>`<div class="mrow" data-act="add-member-do" data-id="${u.id}" data-cid="${c.id}">${avatarHTML(u.avatar,44,u.name)}<div class="rc"><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div><span style="color:var(--gold)">${ICO.plus}</span></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px;font-size:13px">کاربری پیدا نشد.</p>`};
-q.oninput=run;run();q.focus()}});
-}
-/* ============ FORWARD/POLL/VIEWER ============ */
-function forwardModal(ids){
-modal({title:'ارسال به…',icon:ICO.fwd,wide:true,
-body:`<div class="search-box" style="margin-bottom:12px">${ICO.search}<input id="fwQ" placeholder="جستجوی گفتگو"></div><div id="fwList" style="max-height:340px;overflow-y:auto"></div>`,
-foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="fwOk">ارسال</button>`,
-onMount:ov=>{
-const chosen=new Set();const q=document.getElementById('fwQ',ov),l=document.getElementById('fwList',ov);
-const run=()=>{const v=q.value.toLowerCase();
-const arr=Object.values(S.chats).filter(c=>canPost(c)&&chatName(c).toLowerCase().includes(v));
-l.innerHTML=arr.length?arr.map(c=>`<div class="mrow ${chosen.has(c.id)?'on':''}" data-c="${c.id}">${avatarHTML(c.type==='saved'?savedAv():chatAvatar(c),44,chatName(c))}<div class="rc"><div class="rn">${esc(chatName(c))}</div><div class="rs">${chatSub(c)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="text-align:center;color:var(--txt2);padding:16px">گفتگویی پیدا نشد</p>`;
-l.querySelectorAll('[data-c]').forEach(e2=>e2.onclick=()=>{const cid=e2.dataset.c;chosen.has(cid)?chosen.delete(cid):chosen.add(cid);run()})};
-q.oninput=run;run();
-document.getElementById('fwOk',ov).onclick=()=>{
-if(!chosen.size)return toast('یک گفتگو انتخاب کنید','err');
-const src=msgChat(ids[0]);
-chosen.forEach(cid=>{const dst=chatById(cid);
-ids.forEach(mid=>{const m=src.messages.find(x=>x.id===mid);if(!m||m.type==='system')return;
-const cp=JSON.parse(JSON.stringify(m));cp.id=uid('m');cp.chatId=cid;cp.senderId=S.me;cp.createdAt=Date.now();cp.readBy=[S.me];cp.status='sent';cp.reactions={};
-cp.fwd={name:S.users[m.senderId]?S.users[m.senderId].name:'کاربر'};delete cp.views;delete cp.editedAt;dst.messages.push(cp);Backend.sendMessage(cid,cp)})});
-DB.save();closeModal(ov);state.selectMode=false;state.selected.clear();
-if(chosen.size===1)openChat([...chosen][0]);else renderList();
-toast(fa(ids.length)+' پیام ارسال شد ✅')}}});
-}
-function pollModal(){
-modal({title:'نظرسنجی',icon:ICO.poll,
-body:`<div class="field"><label>سؤال</label><input class="inp" id="plQ" maxlength="120" placeholder="سؤال نظرسنجی…"></div>
-<div id="plOpts"></div><button class="btn btn-ghost btn-sm" id="plAdd" style="margin-top:6px">${ICO.plus} افزودن گزینه</button>
-<div class="perm" style="padding:14px 0 0"><div class="pc"><div class="pn">چندانتخابی</div></div><button class="switch" id="plMulti"></button></div>`,
-foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="plOk">ارسال</button>`,
-onMount:ov=>{
-let multi=false;const box=document.getElementById('plOpts',ov);let n=0;
-const add=v=>{n++;const d=document.createElement('div');d.className='field';d.innerHTML=`<input class="inp plO" maxlength="80" placeholder="گزینه ${fa(n)}" value="${esc(v||'')}">`;box.appendChild(d);d.querySelector('input').focus()};
-add();add();document.getElementById('plAdd',ov).onclick=()=>{if(box.children.length>=10)return toast('حداکثر ۱۰ گزینه','err');add()};
-document.getElementById('plMulti',ov).onclick=e=>{multi=!multi;e.currentTarget.classList.toggle('on',multi)};
-document.getElementById('plOk',ov).onclick=()=>{const q=document.getElementById('plQ',ov).value.trim();const opts=[...box.querySelectorAll('.plO')].map(i=>i.value.trim()).filter(Boolean).map(t=>({t,v:[]}));
-if(!q)return toast('سؤال را بنویسید','err');if(opts.length<2)return toast('حداقل ۲ گزینه','err');
-const c=chatById(state.chatId);pushMsg(c,{type:'poll',poll:{q,opts,multi,closed:false}});closeModal(ov);renderList()}}});
-}
-function lightbox(src){
-const d=document.createElement('div');d.className='lightbox';let z=1;
-d.innerHTML=`<div class="lb-bar"><button id="lbIn">${ICO.zoomIn}</button><button id="lbOut">${ICO.zoomOut}</button><button id="lbDl">${ICO.down}</button><button id="lbX">${ICO.close}</button></div><img src="${src}">`;
-document.getElementById('layer').appendChild(d);
-const img=d.querySelector('img');
-document.getElementById('lbIn',d).onclick=()=>{z=Math.min(z*1.25,4);img.style.transform=`scale(${z})`};
-document.getElementById('lbOut',d).onclick=()=>{z=Math.max(z/1.25,1);img.style.transform=`scale(${z})`};
-document.getElementById('lbDl',d).onclick=()=>{const a=document.createElement('a');a.href=src;a.download='nexo-image.jpg';a.click()};
-const close=()=>{d.style.animation='fade .2s reverse both';setTimeout(()=>d.remove(),180)};
-document.getElementById('lbX',d).onclick=close;d.onclick=e=>{if(e.target===d)close()};
-}
-function reactMenu(mid,anchor){
-const set=['👍','❤️','🔥','😮','😂','🎉','😢','👏'];
-menuAt(anchor,`<div style="display:flex;gap:4px;padding:4px">${set.map(e=>`<button class="ebtn" data-act="react" data-mid="${mid}" data-e="${e}" style="width:38px;height:38px">${e}</button>`).join('')}</div>`);
+menuAt(anchor,`<button class="mi" data-act="open-info" data-id="${id}">${ICO.info} اطلاعات</button>
+<div class="msep"></div>
+<button class="mi" data-act="clear-history" data-id="${id}">${ICO.trash} پاک کردن تاریخچه</button>`);
 }
 function menuAt(anchor,html,opts={}){
 closeMenu();
@@ -1534,106 +1393,45 @@ setTimeout(()=>document.addEventListener('click',outsideMenu,{once:true}),10);
 let curMenu=null;
 function closeMenu(){if(curMenu){curMenu.remove();curMenu=null}}
 function outsideMenu(){closeMenu()}
-/* ============ CHAT/MSG MENUS ============ */
-function chatMenu(id,anchor){
-const c=chatById(id);if(!c)return;const mine=isAdmin(c);const pid=peerOf(c);
-const items=[];
-items.push(`<button class="mi" data-act="open-info" data-id="${id}">${ICO.info} اطلاعات</button>`);
-items.push(`<button class="mi" data-act="chat-search" data-id="${id}">${ICO.search} جستجو در گفتگو</button>`);
-items.push(`<button class="mi" data-act="mute-chat" data-id="${id}">${c.muted?ICO.bell:ICO.mute} ${c.muted?'فعال کردن اعلان':'بی‌صدا'}</button>`);
-items.push(`<button class="mi" data-act="pin-chat" data-id="${id}">${ICO.pin} ${c.pinned?'برداشتن':'سنجاق'}</button>`);
-items.push(`<button class="mi" data-act="mark-unread" data-id="${id}">${ICO.check} خوانده‌نشده</button>`);
-items.push(`<button class="mi" data-act="${c.archived?'unarchive-chat':'archive-chat'}" data-id="${id}">${ICO.archive} ${c.archived?'خروج از آرشیو':'آرشیو'}</button>`);
-if(c.type!=='saved')items.push(`<button class="mi" data-act="copy-invite" data-id="${id}">${ICO.link} کپی لینک دعوت</button>`);
-if(c.type==='private'&&pid)items.push(`<button class="mi" data-act="block-user" data-id="${pid.id}">${ICO.ban} ${pid.blocked?'رفع مسدودی':'مسدود'}</button>`);
-if(mine&&c.type!=='private'&&c.type!=='saved')items.push(`<button class="mi" data-act="edit-chat" data-id="${id}">${ICO.edit} ویرایش</button>`);
-items.push('<div class="msep"></div>');
-items.push(`<button class="mi" data-act="clear-history" data-id="${id}">${ICO.trash} پاک کردن تاریخچه</button>`);
-if(c.type!=='saved')items.push(`<button class="mi danger" data-act="leave-chat" data-id="${id}">${ICO.out} ${isOwner(c)?'حذف':(c.type==='channel'?'لغو عضویت':'خروج')}</button>`);
-menuAt(anchor,items.join(''));
+function selectSetting(key){
+const p=SETTINGS_PAGES[state.settingsPage];const row=p.rows.find(r=>r.key===key);
+modal({title:row.label,icon:row.icon||ICO.shield,body:row.options.map(o=>`<div class="mrow ${S.settings[key]===o.v?'on':''}" data-v="${o.v}"><div class="rc"><div class="rn">${o.t}</div></div><span class="radio"></span></div>`).join(''),
+onMount:ov=>{[...ov.querySelectorAll('.mrow')].forEach(r=>r.onclick=()=>{S.settings[key]=r.dataset.v;DB.save();closeModal(ov);renderList();toast('تنظیم ذخیره شد')})}});
 }
-function msgMenu(mid,anchor){
-const m=findMsg(mid);if(!m)return;const c=msgChat(mid);const mine=isMine(m);const adm=isAdmin(c);
-const items=[];
-if(m.type!=='system'){
-items.push(`<div style="display:flex;gap:4px;padding:4px 6px 8px">${['👍','❤️','🔥','😂','😮','🎉'].map(e=>`<button class="ebtn" data-act="react" data-mid="${mid}" data-e="${e}">${e}</button>`).join('')}</div><div class="msep"></div>`);
-if(canPost(c))items.push(`<button class="mi" data-act="reply" data-mid="${mid}">${ICO.reply} پاسخ</button>`);
-items.push(`<button class="mi" data-act="copy-msg" data-mid="${mid}">${ICO.copy} کپی متن</button>`);
-items.push(`<button class="mi" data-act="forward" data-mid="${mid}">${ICO.fwd} ارسال به…</button>`);
-if(m.text)items.push(`<button class="mi" data-act="select-mode" data-mid="${mid}">${ICO.check} انتخاب چندگانه</button>`);
-if(c.type!=='channel'||adm)items.push(`<button class="mi" data-act="pin-msg" data-mid="${mid}">${ICO.pin} ${(c.pinnedIds||[]).includes(mid)?'برداشتن':'سنجاق'}</button>`);
-if(mine&&m.type==='text')items.push(`<button class="mi" data-act="edit-msg" data-mid="${mid}">${ICO.edit} ویرایش</button>`);
-items.push('<div class="msep"></div>');
-if(mine||adm)items.push(`<button class="mi danger" data-act="delete-msg" data-mid="${mid}">${ICO.trash} حذف پیام</button>`);
-}else if(adm){items.push(`<button class="mi danger" data-act="delete-msg" data-mid="${mid}">${ICO.trash} حذف</button>`)}
-menuAt(anchor,items.join(''));
+function openUserProfile(id){
+const u=S.users[id];if(!u)return;closeMenu();
+modal({title:'پروفایل',icon:ICO.info,
+body:`<div class="ihero" style="padding-top:6px">${avatarHTML(u.avatar,100,u.name,u.online)}<h2>${esc(u.name)}</h2>
+<div class="st">${u.online?'آنلاین':relTime(u.lastSeen)}</div>
+<div class="st" style="direction:ltr;color:var(--gold);font-weight:700;margin-top:4px">@${esc(u.username)}</div>
+${u.bio?`<p style="color:var(--txt2);font-size:13.5px;margin:10px 12px 0">${esc(u.bio)}</p>`:''}</div>
+<div class="iacts" style="border-top:1px solid var(--line2)">
+<button class="iact" data-act="start-private" data-id="${u.id}">${ICO.chat}پیام</button>
+<button class="iact" data-act="block-user" data-id="${u.id}" style="color:var(--danger)">${ICO.ban}${u.blocked?'رفع مسدودی':'مسدود'}</button></div>`});
 }
-function memberMenu(cid,uidv,anchor){
-const c=chatById(cid);const u=S.users[uidv];if(!c||!u)return;
-const myRole=c.members[S.me]?c.members[S.me].role:'member';const role=c.members[uidv]?c.members[uidv].role:'member';
-const items=[`<button class="mi" data-act="open-user" data-id="${uidv}">${ICO.info} مشاهده پروفایل</button>`];
-if(uidv!==S.me&&(myRole==='owner'||(myRole==='admin'&&role==='member'))){
-items.push(`<button class="mi" data-act="promote" data-id="${uidv}">${ICO.shield} ${role==='admin'?'برکناری':'ارتقا به مدیر'}</button>`);
-items.push(`<button class="mi" data-act="restrict" data-id="${uidv}">${ICO.lock} ${c.members[uidv].restricted&&c.members[uidv].restricted>Date.now()?'رفع محدودیت':'محدود کردن'}</button>`);
-items.push(`<div class="msep"></div><button class="mi danger" data-act="kick" data-id="${uidv}">${ICO.trash} حذف از ${c.type==='channel'?'کانال':'گروه'}</button>`);
-}
-if(uidv===S.me)items.push(`<div class="msep"></div><button class="mi danger" data-act="leave-chat" data-id="${c.id}">${ICO.out} خروج</button>`);
-menuAt(anchor,items.join(''));
-}
-/* ============ TOASTS ============ */
-function toast(text,kind){
-const t=document.createElement('div');t.className='toast '+(kind||'');
-t.innerHTML=`${kind==='err'?ICO.info:ICO.sparkle}<span>${esc(text)}</span>`;
-document.getElementById('toasts').appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},3200);
-}
-function copyText(t){
-if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('کپی شد 📋')).catch(()=>fb());
-else fb();
-function fb(){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('کپی شد 📋')}catch(e){toast('کپی نشد','err')}a.remove()}
+function lightbox(src){
+const d=document.createElement('div');d.className='lightbox';
+d.innerHTML=`<div class="lb-bar"><button id="lbX">${ICO.close}</button></div><img src="${src}">`;
+document.getElementById('layer').appendChild(d);
+document.getElementById('lbX',d).onclick=()=>{d.style.animation='fade .2s reverse both';setTimeout(()=>d.remove(),180)};
+d.onclick=e=>{if(e.target===d){d.style.animation='fade .2s reverse both';setTimeout(()=>d.remove(),180)}};
 }
 /* ============ EMOJI ============ */
-const EMO={
-'صورتک':['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😮‍💨','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾'],
-'دست و قلب':['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗️','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','👁‍🗨','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🀄','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
-};
-const STICKERS=['😍','🤩','🔥','💎','👑','🌹','✨','🎉','💯','🥇','🦁','🚀','❤️','😎','🤩','🥹','☀️','🍀','🎁','🏆','👏','🙏','🥰','😴','🤯','🫶','🫡','👻','💪'];
-const RECENT_KEY='nexo.recent.emoji';
-let pickerOpen=false,pickerCat='صورتک';
-function syncEmojiBtn(){const b=document.getElementById('emojiBtn');if(b)b.classList.toggle('on',pickerOpen)}
+const EMO_LIST=['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','😶','😐','😑','😬','🙄','😯','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️','💕','💞','💓','💗','💖','💘','💝','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✌️','🤞','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','☝️','🔥','✨','🎉','💯','🥇','🦁','🚀','☀️','🍀','🎁','🏆','👻','💪','🫶','🫡'];
+let pickerOpen=false;
 function togglePicker(force){
 const slot=document.getElementById('pickerSlot');if(!slot)return;
 const open=force==null?!pickerOpen:force;
-pickerOpen=open;syncEmojiBtn();
+pickerOpen=open;
 if(!open){slot.innerHTML='';return}
-const recents=JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');
-const cats=Object.keys(EMO);
-slot.innerHTML=`<div class="picker">
-<div class="ph">
-<div class="search-box">${ICO.search}<input id="emSearch" placeholder="جستجوی ایموجی…"></div>
-<button class="icon-btn" data-act="emoji-close" title="بستن">${ICO.close}</button>
-</div>
-<div class="pcats">${recents.length?`<button class="pcat" data-cat="__recent">🕘</button>`:''}
-${cats.map(c=>`<button class="pcat ${pickerCat===c?'on':''}" data-cat="${c}">${EMO[c][0]}</button>`).join('')}
-<button class="pcat" data-cat="__sticker">🎭</button></div>
-<div class="pgrid" id="emGrid"></div></div>`;
-const grid=document.getElementById('emGrid',slot);
-const paint=list=>{grid.innerHTML=list.map(e=>`<button class="ebtn" data-em="${e}">${e}</button>`).join('')};
-const showCat=c=>{pickerCat=c;[...slot.querySelectorAll('.pcat')].forEach(b=>b.classList.toggle('on',b.dataset.cat===c));
-grid.classList.toggle('big',c==='__sticker');
-if(c==='__sticker')paint(STICKERS);else if(c==='__recent')paint(recents.length?recents:['😀','❤️','👍','🔥','😂']);else paint(EMO[c])};
-showCat(recents.length?'__recent':cats[0]);
-[...slot.querySelectorAll('.pcat')].forEach(b=>b.onclick=()=>showCat(b.dataset.cat));
-document.getElementById('emSearch',slot).oninput=e=>{const q=e.target.value.trim();grid.classList.remove('big');
-if(!q)return showCat(cats[0]);
-const all=[].concat(...Object.values(EMO),STICKERS);grid.innerHTML=all.slice(0,120).map(x=>`<button class="ebtn" data-em="${x}">${x}</button>`).join('')};
-grid.onclick=e=>{const b=e.target.closest('[data-em]');if(!b)return;const em=b.dataset.em;
-const r=JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');const nr=[em,...r.filter(x=>x!==em)].slice(0,24);localStorage.setItem(RECENT_KEY,JSON.stringify(nr));
-const ta=document.getElementById('cin');if(ta){ta.value+=em;ta.focus();ta.dispatchEvent(new Event('input'))}};
+slot.innerHTML=`<div class="picker"><div class="pgrid">${EMO_LIST.map(e=>`<button class="ebtn" data-em="${e}">${e}</button>`).join('')}</div></div>`;
+slot.querySelector('.pgrid').onclick=e=>{const b=e.target.closest('[data-em]');if(!b)return;
+const ta=document.getElementById('cin');if(ta){ta.value+=b.dataset.em;ta.focus();ta.dispatchEvent(new Event('input'))}};
 }
 document.addEventListener('click',e=>{
 if(!pickerOpen)return;
 if(e.target.closest('.picker'))return;
-if(e.target.closest('[data-act="emoji-open"]')||e.target.closest('[data-act="att-sticker"]'))return;
+if(e.target.closest('[data-act="emoji-open"]'))return;
 togglePicker(false);
 });
 /* ============ STORIES ============ */
@@ -1642,22 +1440,19 @@ function newStoryModal(){
 modal({title:'استوری جدید',icon:ICO.story,wide:true,
 body:`<div style="display:flex;gap:8px;margin-bottom:14px"><button type="button" class="opt-pill on" data-st="image">تصویر</button><button type="button" class="opt-pill" data-st="text">متن</button></div>
 <div id="stImgBox"><label class="story-drop" for="stFile">${ICO.img}<span>انتخاب تصویر استوری</span></label><input type="file" id="stFile" accept="image/*" class="hidden"><div id="stPrev"></div></div>
-<div id="stTxtBox" class="hidden"><textarea class="inp st-text" id="stText" rows="3" maxlength="120" placeholder="متن استوری…"></textarea>
-<div class="sec-title" style="padding:10px 0 4px">پس‌زمینه</div><div class="av-row" id="stBgs"></div></div>
-<div class="field" style="margin-top:14px"><label>کپشن (اختیاری)</label><input class="inp" id="stCap" maxlength="80" placeholder="کپشن روی تصویر…"></div>`,
+<div id="stTxtBox" class="hidden"><textarea class="inp st-text" id="stText" rows="3" maxlength="120" placeholder="متن استوری…"></textarea></div>
+<div class="field" style="margin-top:14px"><label>کپشن (اختیاری)</label><input class="inp" id="stCap" maxlength="80" placeholder="کپشن…"></div>`,
 foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="stOk">انتشار استوری</button>`,
 onMount:ov=>{
-let mode='image',src=null,bg=SBGS[0];
+let mode='image',src=null;
 ov.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{ov.querySelectorAll('[data-st]').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.st;
 document.getElementById('stImgBox',ov).classList.toggle('hidden',mode!=='image');document.getElementById('stTxtBox',ov).classList.toggle('hidden',mode!=='text')});
-document.getElementById('stBgs',ov).innerHTML=SBGS.map((g,i)=>`<div class="av-pick ${i===0?'sel':''}" data-bg="${i}" style="background:${g}"></div>`).join('');
-ov.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{bg=SBGS[+b.dataset.bg];ov.querySelectorAll('[data-bg]').forEach(x=>x.classList.remove('sel'));b.classList.add('sel')});
 document.getElementById('stFile',ov).onchange=async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,1080,.8);src=d.src;document.getElementById('stPrev',ov).innerHTML=`<img src="${src}">`};
 document.getElementById('stOk',ov).onclick=()=>{
 const cap=document.getElementById('stCap',ov).value.trim();
 if(mode==='image'&&!src)return toast('یک تصویر انتخاب کنید','err');
 if(mode==='text'&&!document.getElementById('stText',ov).value.trim())return toast('متن استوری خالی است','err');
-const st={id:uid('s'),userId:S.me,type:mode,src:mode==='image'?src:null,text:mode==='text'?document.getElementById('stText',ov).value.trim():cap,bg,createdAt:Date.now(),views:[]};
+const st={id:uid('s'),userId:S.me,type:mode,src:mode==='image'?src:null,text:mode==='text'?document.getElementById('stText',ov).value.trim():cap,bg:SBGS[0],createdAt:Date.now(),views:[]};
 S.stories.push(st);Backend.publishStory(st);DB.save();closeModal(ov);renderList();toast('استوری منتشر شد ✨')}}});
 }
 let svCtl=null;
@@ -1668,27 +1463,22 @@ const ov=document.createElement('div');ov.className='story-view';document.getEle
 function show(){
 const s=list[i];
 if(s.userId!==S.me&&!(s.views||[]).includes(S.me)){(s.views=s.views||[]).push(S.me);DB.save();
-if(RTDB&&FB_OK&&!s.demo)R('stories/'+s.id+'/views/'+S.me).set(true)}
+if(RTDB&&FB_OK)R('stories/'+s.id+'/views/'+S.me).set(true)}
 const u=S.users[s.userId]||me();
 ov.innerHTML=`<div class="sv-inner">
 <div class="sv-prog">${list.map((_,k)=>`<span class="sp ${k<i?'done':''} ${k===i?'run':''}"><i></i></span>`).join('')}</div>
-<div class="sv-head">${avatarHTML(u.avatar,38,u.name)}<div class="sv-hc"><b>${esc(u.name)}</b><span>${relTime(s.createdAt).replace('آخرین بازدید ','')}</span></div>
-${s.userId===S.me?`<button class="icon-btn" data-sdel="${s.id}">${ICO.trash}</button>`:''}
+<div class="sv-head">${avatarHTML(u.avatar,38,u.name)}<div class="sv-hc"><b>${esc(u.name)}</b><span>${relTime(s.createdAt)}</span></div>
 <button class="icon-btn" data-sx>${ICO.close}</button></div>
 <div class="sv-body ${s.type==='text'?'sv-text':''}" style="${s.type==='text'?`background:${s.bg||SBGS[0]}`:''}">
 ${s.type==='image'&&s.src?`<img src="${s.src}">`:''}
 ${s.type==='text'?`<div class="sv-cap">${esc(s.text||'')}</div>`:(s.text?`<div class="sv-cap">${esc(s.text)}</div>`:'')}
 </div>
-<div class="sv-zone prev" data-zp title="قبلی"></div><div class="sv-zone next" data-zn title="بعدی"></div>
-<div class="sv-foot">${(s.views||[]).length?`<span class="sv-views">${ICO.eye} ${fa((s.views||[]).length)} بازدید</span>`:''}</div>
+<div class="sv-zone prev" data-zp></div><div class="sv-zone next" data-zn></div>
 </div>`;
 const runSp=ov.querySelector('.sp.run');
 if(runSp)runSp.addEventListener('animationend',e=>{if(e.target.tagName==='I')next()});
 else setTimeout(next,5000);
 ov.querySelector('[data-sx]').onclick=close;
-const d=ov.querySelector('[data-sdel]');if(d)d.onclick=()=>{S.stories=S.stories.filter(x=>x.id!==s.id);DB.save();
-if(RTDB&&FB_OK&&!s.demo)R('stories/'+s.id).remove();
-if(!activeStories(uidv).length){close();toast('استوری حذف شد')}else{list.splice(i,1);if(i>=list.length)i=list.length-1;show();renderList()}};
 ov.querySelector('[data-zn]').onclick=next;ov.querySelector('[data-zp]').onclick=prev;
 }
 function next(){if(i<list.length-1){i++;show()}else close()}
@@ -1697,359 +1487,7 @@ function close(){svCtl=null;ov.style.animation='fade .2s reverse both';setTimeou
 svCtl={next,prev,close};
 show();
 }
-/* ============ EVENT DISPATCH ============ */
-document.addEventListener('click',ev=>{
-const t=ev.target.closest('[data-act]');if(!t)return;
-const a=t.dataset.act;ev.stopPropagation();
-switch(a){
-case 'logo':state.section='chats';state.chatId=null;unsubscribeMessages();renderAll();break;
-case 'nav':state.section=t.dataset.k;if(t.dataset.k==='search')state.focusSearch=true;renderRail();renderList();break;
-case 'settings-go':state.settingsPage=t.dataset.k;renderList();break;
-case 'settings-back':state.settingsPage='main';renderList();break;
-case 'toggle-theme':setTheme(S.settings.theme==='dark'?'light':'dark');break;
-case 'set-theme':setTheme(t.dataset.v);break;
-case 'set-toggle':S.settings[t.dataset.key]=!S.settings[t.dataset.key];DB.save();applyTheme();renderList();
-if(t.dataset.key==='desktop'&&S.settings.desktop&&Notification.permission!=='granted')Notification.requestPermission();break;
-case 'set-select':selectSetting(t.dataset.key);break;
-case 'folder':state.folder=t.dataset.id;renderList();break;
-case 'new-folder':newFolderModal();break;
-case 'manage-folders':manageFolders();break;
-case 'open-chat':closeMenu();openChat(t.dataset.id);break;
-case 'close-chat':closeChat();break;
-case 'start-private':closeMenu();closeModal();startPrivateChat(t.dataset.id);break;
-case 'open-user':closeMenu();openUserProfile(t.dataset.id);break;
-case 'lookup':closeMenu();closeModal();lookupUsername(t.dataset.un);break;
-case 'new-menu':newMenu(t);break;
-case 'new-private':closeMenu();closeModal();state.section='chats';renderRail();renderList();newPrivateModal();break;
-case 'new-group':closeMenu();closeModal();newGroupModal();break;
-case 'new-channel':closeMenu();closeModal();newChannelModal();break;
-case 'new-story':closeMenu();closeModal();newStoryModal();break;
-case 'view-story':closeMenu();openStoryViewer(t.dataset.id);break;
-case 'join-link':closeMenu();joinByLinkModal();break;
-case 'chat-menu':closeMenu();chatMenu(t.dataset.id||state.chatId,t);break;
-case 'msg-menu':closeMenu();msgMenu(t.dataset.mid,t);break;
-case 'member-menu':closeMenu();memberMenu(state.chatId,t.dataset.id,t);break;
-case 'react-menu':closeMenu();reactMenu(t.dataset.mid,t);break;
-case 'react':{const m=findMsg(t.dataset.mid);if(!m)break;const e=t.dataset.e;m.reactions=m.reactions||{};
-const arr=m.reactions[e]||[];const i=arr.indexOf(S.me);i>=0?arr.splice(i,1):arr.push(S.me);
-if(!arr.length)delete m.reactions[e];else m.reactions[e]=arr;DB.save();
-const cc=msgChat(t.dataset.mid);
-if(cc&&RTDB&&FB_OK&&!cc.id.startsWith('saved_'))R('messages/'+cc.id+'/'+m.id+'/reactions').set(m.reactions);
-renderMessages();closeMenu();break}
-case 'reply':state.replyTo=t.dataset.mid;state.editId=null;renderComposerBanner();closeMenu();document.getElementById('cin')&&document.getElementById('cin').focus();break;
-case 'cancel-reply':state.replyTo=null;renderComposerBanner();break;
-case 'edit-msg':{const m=findMsg(t.dataset.mid);state.editId=m.id;state.replyTo=null;renderComposerBanner();closeMenu();
-const ta=document.getElementById('cin');if(ta){ta.value=m.text;ta.focus();ta.dispatchEvent(new Event('input'))}break}
-case 'cancel-edit':{state.editId=null;renderComposerBanner();const ta2=document.getElementById('cin');if(ta2){ta2.value=state.drafts[state.chatId]||'';ta2.dispatchEvent(new Event('input'))}break}
-case 'copy-msg':{const m=findMsg(t.dataset.mid);copyText(m?(m.text||''):'');closeMenu();break}
-case 'forward':closeMenu();forwardModal([t.dataset.mid]);break;
-case 'pin-msg':{const cc=msgChat(t.dataset.mid);cc.pinnedIds=cc.pinnedIds||[];const i2=cc.pinnedIds.indexOf(t.dataset.mid);
-i2>=0?cc.pinnedIds.splice(i2,1):(cc.pinnedIds.length>=5?cc.pinnedIds.shift():cc.pinnedIds.push(t.dataset.mid));
-DB.save();if(RTDB&&FB_OK&&!cc.id.startsWith('saved_'))R('chats/'+cc.id+'/pinnedIds').set(cc.pinnedIds);
-closeMenu();renderChat();toast(i2>=0?'سنجاق برداشته شد':'پیام سنجاق شد 📌');break}
-case 'unpin':{const cc2=chatById(state.chatId);cc2.pinnedIds=(cc2.pinnedIds||[]).filter(x=>x!==t.dataset.mid);DB.save();
-if(RTDB&&FB_OK&&!cc2.id.startsWith('saved_'))R('chats/'+cc2.id+'/pinnedIds').set(cc2.pinnedIds);renderChat();break}
-case 'delete-msg':closeMenu();{const mm=findMsg(t.dataset.mid);const ccc=msgChat(t.dataset.mid);
-if(!isMine(mm)&&!isAdmin(ccc))return toast('اجازه حذف را ندارید','err');
-confirmBox('حذف پیام','این پیام حذف شود؟',()=>{ccc.messages=ccc.messages.filter(x=>x.id!==t.dataset.mid);DB.save();
-if(RTDB&&FB_OK&&!ccc.id.startsWith('saved_'))R('messages/'+ccc.id+'/'+t.dataset.mid).remove();
-renderMessages();renderList();renderInfo()},'حذف');break}
-case 'select-mode':state.selectMode=true;state.selected.add(t.dataset.mid);closeMenu();renderMessages();renderSelectBar();break;
-case 'bubble':if(state.selectMode){state.selected.has(t.dataset.mid)?state.selected.delete(t.dataset.mid):state.selected.add(t.dataset.mid);
-t.closest('.mrow').classList.toggle('sel',state.selected.has(t.dataset.mid));renderSelectBar()}break;
-case 'sel-all':{const cc3=chatById(state.chatId);if(state.selected.size===cc3.messages.length){state.selected.clear()}else cc3.messages.forEach(m=>m.type!=='system'&&state.selected.add(m.id));renderMessages();renderSelectBar();break}
-case 'sel-fwd':forwardModal([...state.selected]);break;
-case 'sel-del':confirmBox('حذف پیام‌ها',fa(state.selected.size)+' پیام حذف شود؟',()=>{const cc4=chatById(state.chatId);
-const ids=[...state.selected];
-cc4.messages=cc4.messages.filter(m=>!state.selected.has(m.id));state.selected.clear();state.selectMode=false;DB.save();
-if(RTDB&&FB_OK&&!cc4.id.startsWith('saved_'))ids.forEach(mid=>R('messages/'+cc4.id+'/'+mid).remove());
-renderChat();renderList()},'حذف');break;
-case 'sel-cancel':state.selectMode=false;state.selected.clear();renderMessages();renderSelectBar();break;
-case 'send-or-rec':case 'start-rec':startRec();break;
-case 'stop-rec':stopRec(false);break;
-case 'cancel-rec':stopRec(true);break;
-case 'send-msg':sendText();break;
-case 'attach-menu':attachMenu(t);break;
-case 'att-img':closeMenu();document.getElementById('fileImg').click();break;
-case 'att-vid':closeMenu();document.getElementById('fileVid').click();break;
-case 'att-file':closeMenu();document.getElementById('fileAny').click();break;
-case 'att-loc':closeMenu();sendLocation();break;
-case 'att-poll':closeMenu();pollModal();break;
-case 'att-contact':closeMenu();sendMyContact();break;
-case 'att-sticker':closeMenu();togglePicker(true);break;
-case 'emoji-open':togglePicker();break;
-case 'emoji-close':togglePicker(false);break;
-case 'open-info':state.infoOpen=true;closeMenu();renderInfo();break;
-case 'close-info':state.infoOpen=false;renderInfo();break;
-case 'info-tab':infoTab=t.dataset.k;renderInfo();break;
-case 'open-link':window.open(t.dataset.u,'_blank','noopener');break;
-case 'lightbox':closeMenu();lightbox(t.dataset.src);break;
-case 'download':{const m=findMsg(t.dataset.mid);if(!m||!m.media)break;const an=document.createElement('a');an.href=m.media.src;an.download=m.media.name||'nexo-file';an.click();toast('دانلود شروع شد');break}
-case 'open-loc':window.open(`https://www.google.com/maps?q=${t.dataset.lat},${t.dataset.lng}`,'_blank','noopener');break;
-case 'play-voice':playVoice(t.dataset.mid,t);break;
-case 'vote':{const m=findMsg(t.dataset.mid);if(!m)break;const p=m.poll;if(p.closed)break;const i3=+t.dataset.i;
-const has=p.opts[i3].v.includes(S.me);
-if(!p.multi)p.opts.forEach(o=>o.v=o.v.filter(x=>x!==S.me));
-has?p.opts[i3].v=p.opts[i3].v.filter(x=>x!==S.me):p.opts[i3].v.push(S.me);
-DB.save();
-const ccv=msgChat(t.dataset.mid);
-if(ccv&&RTDB&&FB_OK&&!ccv.id.startsWith('saved_'))R('messages/'+ccv.id+'/'+m.id+'/poll').set(p);
-renderMessages();break}
-case 'close-poll':{const m2=findMsg(t.dataset.mid);m2.poll.closed=true;DB.save();
-const ccp=msgChat(t.dataset.mid);
-if(ccp&&RTDB&&FB_OK&&!ccp.id.startsWith('saved_'))R('messages/'+ccp.id+'/'+m2.id+'/poll/closed').set(true);
-renderMessages();toast('رأی‌گیری پایان یافت');break}
-case 'jump-msg':{closeMenu();const cid=t.dataset.id,mid=t.dataset.mid;
-if(state.chatId!==cid){openChat(cid);setTimeout(()=>jumpTo(mid),260)}else jumpTo(mid);break}
-case 'chat-search':closeMenu();chatSearch(t.dataset.id||state.chatId);break;
-case 'mute-chat':{const cc5=chatById(t.dataset.id||state.chatId);cc5.muted=!cc5.muted;DB.save();renderAll();toast(cc5.muted?'بی‌صدا شد 🔕':'اعلان فعال شد 🔔');break}
-case 'pin-chat':{const cc6=chatById(t.dataset.id||state.chatId);cc6.pinned=!cc6.pinned;cc6.pinnedOrder=Date.now();DB.save();closeMenu();renderAll();break}
-case 'archive-chat':case 'unarchive-chat':{const cc7=chatById(t.dataset.id||state.chatId);cc7.archived=a==='archive-chat';DB.save();closeMenu();
-if(state.chatId===cc7.id)closeChat();else renderAll();toast(cc7.archived?'به آرشیو منتقل شد':'از آرشیو خارج شد');break}
-case 'mark-unread':{const cc8=chatById(t.dataset.id||state.chatId);cc8.unread=(cc8.unread||0)+1;DB.save();closeMenu();renderAll();break}
-case 'clear-history':closeMenu();confirmBox('پاک کردن تاریخچه','همه پیام‌ها حذف شود؟',()=>{
-const cc9=chatById(t.dataset.id||state.chatId);cc9.messages=[];cc9.pinnedIds=[];cc9.lastMsg=null;DB.save();
-if(RTDB&&FB_OK&&!cc9.id.startsWith('saved_')){R('messages/'+cc9.id).remove();R('chats/'+cc9.id+'/lastMsg').remove()}
-renderChat();renderList();renderInfo();toast('تاریخچه پاک شد')},'پاک کردن');break;
-case 'leave-chat':closeMenu();{const cc10=chatById(t.dataset.id||state.chatId);const own=isOwner(cc10);
-confirmBox(own?'حذف گفتگو':'خروج از گفتگو',own?'این گفتگو و همه پیام‌هایش حذف می‌شود.':'از گفتگو خارج می‌شوید.',()=>{
-if(!own&&(cc10.type==='group'||cc10.type==='channel'))pushSystem(cc10.id,me().name+' خارج شد');
-if(RTDB&&FB_OK&&!cc10.id.startsWith('saved_')){
-if(own){R('chats/'+cc10.id).remove();R('messages/'+cc10.id).remove()}
-else R('chats/'+cc10.id+'/members/'+S.me).remove();
-}
-delete S.chats[cc10.id];DB.save();closeChat();renderAll();toast('انجام شد')},own?'حذف':'خروج');break}
-case 'block-user':{const uid2=t.dataset.id;toggleBlock(uid2);break}
-case 'edit-me':editMeModal();break;
-case 'edit-chat':closeMenu();editChatModal(t.dataset.id||state.chatId);break;
-case 'copy-un':copyText('@'+me().username);break;
-case 'copy-invite':{const cc11=chatById(t.dataset.id||state.chatId);
-if(!cc11.invite)cc11.invite=uid('inv').slice(-8);DB.save();
-if(RTDB&&FB_OK&&!cc11.id.startsWith('saved_'))R('chats/'+cc11.id+'/invite').set(cc11.invite);
-closeMenu();copyText('nexo.app/join/'+cc11.invite);break}
-case 'add-member':closeMenu();addMemberModal(state.chatId);break;
-case 'add-member-do':{const cc12=chatById(t.dataset.cid);const idu=t.dataset.id;
-if(cc12.members[idu])return closeMenu();
-cc12.members[idu]={role:'member',joined:Date.now()};if(S.users[idu])S.users[idu].contact=true;
-if(RTDB&&FB_OK)R('chats/'+t.dataset.cid+'/members/'+idu).set({role:'member',joined:Date.now()});
-pushSystem(cc12.id,S.users[idu]?S.users[idu].name+' اضافه شد':'کاربر اضافه شد');
-DB.save();closeMenu();closeModal();renderAll();toast('عضو اضافه شد ✅');break}
-case 'promote':{const cc13=chatById(state.chatId);const idu2=t.dataset.id;
-cc13.members[idu2].role=cc13.members[idu2].role==='admin'?'member':'admin';DB.save();
-if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu2+'/role').set(cc13.members[idu2].role);
-closeMenu();renderAll();toast('نقش کاربر به‌روزرسانی شد');break}
-case 'restrict':{const cc14=chatById(state.chatId);const idu3=t.dataset.id;const m3=cc14.members[idu3];
-if(m3.restricted&&m3.restricted>Date.now()){delete m3.restricted;toast('محدودیت برداشته شد');
-if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu3+'/restricted').remove()}
-else{m3.restricted=Date.now()+24*36e5;toast('ارسال پیام تا ۲۴ ساعت محدود شد');
-if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu3+'/restricted').set(m3.restricted)}
-DB.save();closeMenu();renderAll();break}
-case 'kick':{const cc15=chatById(state.chatId);const idu4=t.dataset.id;
-confirmBox('حذف عضو','این کاربر حذف شود؟',()=>{delete cc15.members[idu4];
-if(RTDB&&FB_OK)R('chats/'+state.chatId+'/members/'+idu4).remove();
-pushSystem(cc15.id,(S.users[idu4]?S.users[idu4].name:'کاربر')+' حذف شد');DB.save();renderAll();toast('حذف شد')},'حذف');closeMenu();break}
-case 'perm':{const cc16=chatById(state.chatId);const k=t.dataset.k;cc16.permissions=cc16.permissions||{};
-cc16.permissions[k]=cc16.permissions[k]===false?true:false;DB.save();
-if(RTDB&&FB_OK)R('chats/'+state.chatId+'/permissions/'+k).set(cc16.permissions[k]);
-renderInfo();renderChat();break}
-case 'call':toast(t.dataset.kind==='video'?'تماس تصویری به‌زودی فعال می‌شود':'تماس صوتی به‌زودی فعال می‌شود');closeMenu();break;
-case 'switch-account':confirmBox('خروج از حساب','با خروج، از حساب خارج می‌شوید (دیتابیس دست‌نخورده می‌ماند).',()=>{
-if(RTDB&&S.me)R('users/'+S.me+'/online').set(false);
-S.me=null;DB.save();location.reload()},'خروج');break;
-case 'delete-account':confirmBox('حذف حساب','حساب شما از دیتابیس و این دستگاه برای همیشه حذف می‌شود.',()=>{
-const u=me();
-if(u&&RTDB){R('users/'+S.me).remove();R('usernames/'+u.username).remove()}
-localStorage.removeItem(KEY);location.reload()},'حذف دائمی');break;
-case 'ask-notif':if(!('Notification' in window))return toast('مرورگر پشتیبانی نمی‌کند','err');
-Notification.requestPermission().then(p=>{S.settings.desktop=p==='granted';DB.save();renderList();toast(p==='granted'?'اعلان دسکتاپ فعال شد ✅':'اجازه داده نشد',p!=='granted'?'err':'')});break;
-case 'show-blocked':showBlocked();break;
-case 'storage-info':storageInfo();break;
-case 'export-data':{const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-const an=document.createElement('a');an.href=URL.createObjectURL(blob);an.download='nexo-backup.json';an.click();toast('فایل پشتیبان دانلود شد');break}
-case 'clear-cache':{let n=0;Object.values(S.chats).forEach(cc=>cc.messages.forEach(m=>{if(m.type==='image'&&m.media&&m.media.src.length>4e5){m.media.src='';n++}}));
-DB.save();renderMessages();toast(n?'حافظه پنهان پاک شد':'موردی نبود');break}
-case 'dev-data':devData();break;
-case 'reset-all':confirmBox('بازنشانی','همه گفتگوها و کاربران محلی پاک شوند؟ (حساب دیتابیسی حذف نمی‌شود)',()=>{
-S.chats={};S.chats['saved_'+S.me]={id:'saved_'+S.me,type:'saved',messages:[],unread:0,createdAt:Date.now()};S.folders=[];S.stories=S.stories.filter(x=>!x.demo);DB.save();renderAll();toast('بازنشانی انجام شد')},'بازنشانی');break;
-case 'about-info':modal({title:'درباره Nexo',icon:ICO.info,body:`<div style="text-align:center;padding:8px"><div style="width:78px;margin:0 auto 12px">${LOGO}</div>
-<h2 class="gold-t" style="margin:0 0 4px;font-size:30px">NEXO</h2><p style="color:var(--txt2);margin:0 0 16px">نسخه ${fa('1.2.0')} — متصل به Firebase Realtime Database</p></div>`});break;
-case 'about-feat':modal({title:'قابلیت‌های Nexo',icon:ICO.star,body:['ثبت‌نام و ورود با یوزرنیم + رمز روی دیتابیس ابری','جلوگیری از ساخت یوزرنیم تکراری در دیتابیس','جستجوی واقعی کاربران با یوزرنیم','گفتگوی خصوصی زنده با تیک ارسال/خوانده‌شدن','گروه با مدیر و دسترسی','کانال عمومی و خصوصی','استوری ۲۴ ساعته با بازدید','عکس پروفایل قابل دیدن برای همه','پیام صوتی، عکس، ویدیو، فایل، موقعیت','نظرسنجی تک و چندانتخابی','واکنش، پاسخ، ویرایش، حذف، سنجاق، فوروارد','وضعیت آنلاین زنده','نشانگر وضعیت اتصال به دیتابیس','پوشه‌های چت، آرشیو، بی‌صدا','دو تم مشکی‌طلایی و سفید‌طلایی','بلاک دیتابیسی با امکان رفع مسدودی'].map(x=>`<div class="mrow" style="cursor:default"><span style="color:var(--gold)">${ICO.check}</span><div class="rc"><div class="rn" style="font-size:13.5px;font-weight:600">${x}</div></div></div>`).join('')});break;
-case 'close-modal':closeModal();break;
-}
-});
-/* ============ BLOCK (دیتابیسی) ============ */
-async function toggleBlock(userId){
-const u=S.users[userId];if(!u)return;
-const wasBlocked=u.blocked;
-u.blocked=!u.blocked;
-u.contact=u.blocked?false:u.contact;
-DB.save();
-if(RTDB&&FB_OK){
-try{
-if(u.blocked){
-await R('users/'+S.me+'/blocked/'+userId).set(true);
-}else{
-await R('users/'+S.me+'/blocked/'+userId).remove();
-}
-}catch(e){console.error('Block sync error:',e)}
-}
-closeMenu();closeModal();renderAll();
-toast(u.blocked?'🔕 کاربر مسدود شد — پیام‌هایش برایت نمایش داده نمی‌شود':'✅ مسدودی رفع شد');
-}
-function renderSelectBar(){
-const bar=document.getElementById('cbanner');if(!bar)return;
-if(!state.selectMode)return renderComposerBanner();
-bar.innerHTML=`<div class="cbanner"><span style="color:var(--gold)">${ICO.check}</span><div class="bc"><div class="bn">${fa(state.selected.size)} پیام انتخاب شده</div></div>
-<button class="icon-btn" data-act="sel-all" style="width:34px;height:34px" title="انتخاب همه">${ICO.check2}</button>
-<button class="icon-btn" data-act="sel-fwd" style="width:34px;height:34px;color:var(--gold)">${ICO.fwd}</button>
-<button class="icon-btn" data-act="sel-del" style="width:34px;height:34px;color:var(--danger)">${ICO.trash}</button>
-<button class="icon-btn" data-act="sel-cancel" style="width:34px;height:34px">${ICO.close}</button></div>`;
-}
-function jumpTo(mid){
-const n=document.querySelector(`.mrow[data-mid="${mid}"] .bub`);if(!n)return;
-n.scrollIntoView({behavior:'smooth',block:'center'});n.classList.add('flash');setTimeout(()=>n.classList.remove('flash'),1500);
-}
-function setTheme(v){S.settings.theme=v;DB.save();applyTheme();renderRail();renderList();if(state.section==='settings')renderList();toast(v==='dark'?'تم مشکی و طلایی فعال شد 🖤':'تم سفید و طلایی فعال شد 🤍')}
-function newMenu(anchor){
-menuAt(anchor,`<button class="mi" data-act="new-private">${ICO.chat} گفتگوی جدید</button>
-<button class="mi" data-act="new-group">${ICO.group} گروه جدید</button>
-<button class="mi" data-act="new-channel">${ICO.mega} کانال جدید</button>
-<button class="mi" data-act="new-story">${ICO.story} استوری جدید</button>
-<div class="msep"></div>
-<button class="mi" data-act="join-link">${ICO.link} پیوستن با لینک دعوت</button>
-<button class="mi" data-act="open-chat" data-id="saved_${S.me}">${ICO.save} پیام‌های ذخیره‌شده</button>`);
-}
-function attachMenu(anchor){
-menuAt(anchor,`<button class="mi" data-act="att-img">${ICO.img} عکس</button>
-<button class="mi" data-act="att-vid">${ICO.video} ویدیو</button>
-<button class="mi" data-act="att-file">${ICO.file} فایل</button>
-<button class="mi" data-act="att-loc">${ICO.map} موقعیت مکانی</button>
-<button class="mi" data-act="att-poll">${ICO.poll} نظرسنجی</button>
-<button class="mi" data-act="att-contact">${ICO.contact} کارت تماس من</button>
-<div class="msep"></div><button class="mi" data-act="att-sticker">${ICO.smile} ایموجی و استیکر</button>`);
-}
-function selectSetting(key){
-const p=SETTINGS_PAGES[state.settingsPage];const row=p.rows.find(r=>r.key===key);
-modal({title:row.label,icon:row.icon||ICO.shield,body:row.options.map(o=>`<div class="mrow ${S.settings[key]===o.v?'on':''}" data-v="${o.v}"><div class="rc"><div class="rn">${o.t}</div></div><span class="radio"></span></div>`).join(''),
-onMount:ov=>{[...ov.querySelectorAll('.mrow')].forEach(r=>r.onclick=()=>{S.settings[key]=r.dataset.v;DB.save();closeModal(ov);renderList();toast('تنظیم ذخیره شد')})}});
-}
-function showBlocked(){
-const arr=Object.values(S.users).filter(u=>u.blocked);
-modal({title:'کاربران مسدود',icon:ICO.ban,body:arr.length?arr.map(u=>`<div class="mrow"><div style="flex:1;display:flex;gap:10px;align-items:center">${avatarHTML(u.avatar,42,u.name)}<div><div class="rn">${esc(u.name)}</div><div class="rs">@${esc(u.username)}</div></div></div><button class="btn btn-ghost btn-sm" data-act="block-user" data-id="${u.id}">رفع مسدودی</button></div>`).join(''):`<p style="text-align:center;color:var(--txt2);padding:20px">هیچ کاربری مسدود نشده است.</p>`});
-}
-function storageInfo(){
-const size=(localStorage.getItem(KEY)||'').length;
-let media=0,msgs=0;Object.values(S.chats).forEach(c=>c.messages.forEach(m=>{msgs++;if(m.media&&m.media.src)media++}));
-modal({title:'مصرف حافظه',icon:ICO.db,body:`
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-${[['حجم داده‌های محلی',fSize(size)],['تعداد پیام‌ها',fa(msgs)],['رسانه‌ها',fa(media)],['گفتگوها',fa(Object.keys(S.chats).length)]]
-.map(([t,v])=>`<div style="background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:16px;text-align:center"><div class="gold-t" style="font-size:20px;font-weight:800">${v}</div><div style="font-size:12px;color:var(--txt2);margin-top:4px">${t}</div></div>`).join('')}
-</div><div class="note" style="margin-top:14px">پیام‌ها روی دیتابیس ابری Firebase نگه داشته می‌شوند.</div>`});
-}
-function devData(){
-const exists=Object.values(S.users).some(u=>u.demo);
-if(exists){confirmBox('حذف داده آزمایشی','کاربران و استوری‌های نمونه حذف شوند؟',()=>{
-Object.values(S.users).filter(u=>u.demo).forEach(u=>{delete S.users[u.id];
-S.stories=S.stories.filter(s=>s.userId!==u.id);
-Object.values(S.chats).forEach(c=>{if(c.type==='private'&&c.peerId===u.id)delete S.chats[c.id]})});
-DB.save();renderAll();toast('داده‌های آزمایشی حذف شد')},'حذف',true);return}
-const samples=[['آرش محمدی','arash_dev'],['سارا کریمی','sara_k'],['نیما رضایی','nima_nexo'],['الناز حسینی','elnaz_h'],['پارسا','parsa_tech']];
-const ids=[];
-samples.forEach(([n,u],i)=>{const id=uid('u');ids.push(id);S.users[id]={id,name:n,username:u,bio:'کاربر آزمایشی (فقط محلی)',avatar:{col:AVCOLS[i%AVCOLS.length]},createdAt:Date.now(),lastSeen:Date.now()-Math.random()*8e7,online:Math.random()>.6,contact:false,blocked:false,demo:true}});
-S.stories.push({id:uid('s'),userId:ids[0],type:'text',text:'سلام! این یک استوری نمونه است ✨',bg:SBGS[0],createdAt:Date.now()-36e5,views:[],demo:true});
-DB.save();renderAll();toast('۵ کاربر نمونه + ۱ استوری آزمایشی اضافه شد');
-}
-function newFolderModal(){
-const chats=Object.values(S.chats);
-modal({title:'پوشه جدید',icon:ICO.folder,
-body:`<div class="field"><label>نام پوشه</label><input class="inp" id="fdName" maxlength="20" placeholder="مثلاً: کاری"></div>
-<div class="sec-title">گفتگوهای این پوشه</div>
-<div id="fdList" style="max-height:260px;overflow-y:auto">${chats.length?chats.map(c=>`<div class="mrow" data-c="${c.id}">${avatarHTML(c.type==='saved'?savedAv():chatAvatar(c),42,chatName(c))}<div class="rc"><div class="rn">${esc(chatName(c))}</div><div class="rs">${chatSub(c)}</div></div><span class="chk">${ICO.check}</span></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px">گفتگویی نیست</p>`}</div>`,
-foot:`<button class="btn btn-ghost" data-act="close-modal">انصراف</button><button class="btn btn-gold" id="fdOk">ایجاد پوشه</button>`,
-onMount:ov=>{const sel=new Set();
-ov.querySelectorAll('[data-c]').forEach(e2=>e2.onclick=()=>{const id=e2.dataset.c;sel.has(id)?sel.delete(id):sel.add(id);e2.classList.toggle('on',sel.has(id))});
-document.getElementById('fdOk',ov).onclick=()=>{const n=document.getElementById('fdName',ov).value.trim();if(!n)return toast('نام پوشه را بنویسید','err');
-S.folders.push({id:uid('f'),n,chats:[...sel]});DB.save();state.folder=S.folders[S.folders.length-1].id;closeModal(ov);renderList();toast('پوشه ساخته شد 📁')}}});
-}
-function manageFolders(){
-modal({title:'مدیریت پوشه‌ها',icon:ICO.folder,
-body:S.folders.length?S.folders.map(f=>`<div class="mrow"><div class="rc"><div class="rn">${esc(f.n)}</div><div class="rs">${fa((f.chats||[]).length)} گفتگو</div></div>
-<button class="btn btn-ghost btn-sm" data-del="${f.id}">حذف</button></div>`).join('')+
-`<div class="note" style="margin-top:12px">راست‌کلیک روی گفتگو → افزودن به پوشه</div>`
-:`<p style="text-align:center;color:var(--txt2);padding:20px">هنوز پوشه‌ای نساخته‌اید.</p>`,
-onMount:ov=>{ov.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{S.folders=S.folders.filter(f=>f.id!==b.dataset.del);if(!FOLDERS().some(f=>f.id===state.folder))state.folder='all';DB.save();closeModal(ov);renderList();toast('پوشه حذف شد')})}});
-}
-function addToFolderMenu(chatId,anchor){
-if(!S.folders.length)return toast('اول یک پوشه بسازید','err');
-menuAt(anchor,S.folders.map(f=>`<button class="mi" data-f="${f.id}">${ICO.folder} ${esc(f.n)} ${(f.chats||[]).includes(chatId)?'✓':''}</button>`).join(''));
-const m=curMenu;m.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const f=S.folders.find(x=>x.id===b.dataset.f);
-f.chats=f.chats||[];const i=f.chats.indexOf(chatId);i>=0?f.chats.splice(i,1):f.chats.push(chatId);
-DB.save();closeMenu();toast(i>=0?'از پوشه حذف شد':'به پوشه اضافه شد')});
-}
-/* ============ PROFILE / LOOKUP ============ */
-function openUserProfile(id){
-const u=S.users[id];if(!u)return;closeMenu();
-const common=Object.values(S.chats).filter(c=>c.type==='group'&&c.members[id]&&c.members[S.me]);
-const st=activeStories(id);
-modal({title:'پروفایل',icon:ICO.info,
-body:`<div class="ihero" style="padding-top:6px">${avatarHTML(u.avatar,100,u.name,u.online)}<h2>${esc(u.name)}</h2>
-<div class="st">${u.online?'آنلاین':relTime(u.lastSeen)}</div>
-<div class="st" style="direction:ltr;color:var(--gold);font-weight:700;margin-top:4px">@${esc(u.username)}</div>
-${u.bio?`<p style="color:var(--txt2);font-size:13.5px;margin:10px 12px 0">${esc(u.bio)}</p>`:''}</div>
-<div class="iacts" style="border-top:1px solid var(--line2)">
-<button class="iact" data-act="start-private" data-id="${u.id}">${ICO.chat}پیام</button>
-${st.length?`<button class="iact" data-act="view-story" data-id="${u.id}">${ICO.story}استوری</button>`:''}
-<button class="iact" id="cpUn">${ICO.at}کپی یوزرنیم</button>
-<button class="iact" data-act="block-user" data-id="${u.id}" style="color:var(--danger)">${ICO.ban}${u.blocked?'رفع مسدودی':'مسدود'}</button></div>
-${u.contact?'':`<div class="irow" id="addCt"><span class="ic">${ICO.users}</span><div class="rc"><div class="rl">افزودن به مخاطبین</div></div></div>`}
-${common.length?`<div class="sec-title">گفتگوهای مشترک</div>`+common.map(c=>`<div class="irow" data-act="open-chat" data-id="${c.id}"><span class="ic">${ICO.group}</span><div class="rc"><div class="rl">${esc(c.title)}</div><div class="rs">${chatSub(c)}</div></div></div>`).join(''):''}`,
-onMount:ov=>{document.getElementById('cpUn',ov).onclick=()=>copyText('@'+u.username);
-const ac=document.getElementById('addCt',ov);if(ac)ac.onclick=()=>{u.contact=true;DB.save();closeModal(ov);renderAll();toast(u.name+' به مخاطبین اضافه شد ✅')}}});
-}
-async function lookupUsername(raw){
-const n=norm(raw);if(!n)return;
-toast('در حال جستجوی @'+n+'…');
-const c=Object.values(S.chats).find(x=>x.username&&norm(x.username)===n);
-if(c){openChat(c.id);return}
-if(RTDB&&FB_OK){
-try{
-const snap=await R('usernames/'+n).once('value');
-if(snap.exists()){
-const us=await R('users/'+snap.val().uid).once('value');
-const u=us.val();if(u){u.id=snap.val().uid;S.users[u.id]=Object.assign(S.users[u.id]||{},u,{id:u.id});DB.save();openUserProfile(u.id);return}
-}
-}catch(e){console.error(e)}
-}
-modal({title:'یافت نشد',icon:ICO.search,body:`<div style="text-align:center;padding:14px">
-<div style="width:70px;margin:0 auto 12px;color:var(--gold)">${ICO.search}</div>
-<h3 style="margin:0 0 6px">@${esc(n)}</h3>
-<p style="color:var(--txt2);font-size:13.5px;margin:0 0 16px">کاربر، گروه یا کانالی با این یوزرنیم در دیتابیس پیدا نشد.</p>
-<button class="btn btn-gold btn-sm" id="mkDemo" style="margin-top:14px">ساخت پروفایل محلی با این یوزرنیم</button></div>`,
-onMount:ov=>{document.getElementById('mkDemo',ov).onclick=()=>{const id=uid('u');
-S.users[id]={id,name:n.replace(/[._]/g,' ').replace(/\b\w/g,x=>x.toUpperCase()),username:n,bio:'',avatar:{col:AVCOLS[Math.floor(Math.random()*AVCOLS.length)]},createdAt:Date.now(),lastSeen:Date.now(),online:false,contact:true,blocked:false};
-DB.save();closeModal(ov);startPrivateChat(id)}}});
-}
-function chatSearch(id){
-const c=chatById(id);if(!c)return;
-modal({title:'جستجو در گفتگو',icon:ICO.search,
-body:`<div class="search-box">${ICO.search}<input id="csQ" placeholder="متن پیام…" autofocus></div><div id="csRes" style="margin-top:10px;max-height:340px;overflow-y:auto"></div>`,
-onMount:ov=>{const q=document.getElementById('csQ',ov),r=document.getElementById('csRes',ov);
-q.oninput=()=>{const v=q.value.trim().toLowerCase();if(!v){r.innerHTML='';return}
-const arr=c.messages.filter(m=>(m.text||'').toLowerCase().includes(v));
-r.innerHTML=arr.length?arr.slice().reverse().map(m=>`<div class="irow" data-act="jump-msg" data-id="${c.id}" data-mid="${m.id}"><span class="ic">${ICO.search}</span><div class="rc"><div class="rl" style="font-size:13.5px">${esc((m.text||'رسانه').slice(0,60))}</div><div class="rs">${(S.users[m.senderId]?S.users[m.senderId].name:'')+' • '+listTime(m.createdAt)}</div></div></div>`).join(''):`<p style="color:var(--txt2);text-align:center;padding:16px">نتیجه‌ای نبود</p>`};
-q.focus()}});
-}
-function sendLocation(){
-const c=chatById(state.chatId);if(!c)return;
-if(!navigator.geolocation)return toast('موقعیت در دسترس نیست','err');
-toast('در حال دریافت موقعیت…');
-navigator.geolocation.getCurrentPosition(p=>{pushMsg(c,{type:'location',loc:{lat:p.coords.latitude,lng:p.coords.longitude}});renderList()},
-()=>toast('دسترسی به موقعیت داده نشد','err'));
-}
-function sendMyContact(){
-const c=chatById(state.chatId);const u=me();if(!c)return;
-pushMsg(c,{type:'contact',ct:{userId:u.id,name:u.name,username:u.username,avatar:u.avatar}});renderList();
-}
+/* ============ VOICE PLAYER ============ */
 let audioEl=null;
 function playVoice(mid,btn){
 const m=findMsg(mid);if(!m||!m.media||!m.media.src)return toast('فایل صوتی در دسترس نیست','err');
@@ -2060,151 +1498,113 @@ const wave=document.querySelector(`[data-wave="${mid}"]`);const bars=wave?[...wa
 timer=setInterval(()=>{bars.forEach((b,i)=>b.classList.toggle('a',i<=idx));idx++;if(idx>bars.length)idx=0},Math.max(60,(m.media.dur||1)*1000/bars.length));
 audioEl.onended=()=>{clearInterval(timer);btn.innerHTML=ICO.play;bars.forEach(b=>b.classList.remove('a'));audioEl=null};
 }
-/* ============ CONTEXT MENU / LONG PRESS ============ */
+/* ============ CONTEXT MENU ============ */
 document.addEventListener('contextmenu',e=>{
-const mi=e.target.closest('[data-cid]');const mb=e.target.closest('[data-mid].mrow');
-const rect=()=>({getBoundingClientRect:()=>({left:e.clientX,top:e.clientY,right:e.clientX,bottom:e.clientY,width:0,height:0})});
-if(mi){e.preventDefault();chatMenu(mi.dataset.cid,rect());return}
-if(mb){e.preventDefault();msgMenu(mb.dataset.mid,rect());return}
-if(state.section==='chats'){const it=e.target.closest('.item');if(it&&it.dataset.id){e.preventDefault();
-menuAt(null,`<button class="mi" data-act="open-info" data-id="${it.dataset.id}">${ICO.info} اطلاعات</button><button class="mi" id="fadd">${ICO.folder} افزودن به پوشه</button>`,{x:e.clientX,y:e.clientY});
-const fm=document.getElementById('fadd',curMenu);if(fm)fm.onclick=()=>addToFolderMenu(it.dataset.id,fm)}}
+const mi=e.target.closest('[data-cid]');
+if(mi){e.preventDefault();chatMenu(mi.dataset.cid,{getBoundingClientRect:()=>({left:e.clientX,top:e.clientY,right:e.clientX,bottom:e.clientY,width:0,height:0})})}
 });
-function attachLongPress(){
-let tmr=null,sx=0,sy=0;
-document.querySelectorAll('.item[data-cid],.mrow[data-mid]').forEach(node=>{
-node.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;sx=e.clientX;sy=e.clientY;
-tmr=setTimeout(()=>{const mid=node.dataset.mid,cid=node.dataset.cid;
-if(mid)msgMenu(mid,node);else if(cid)chatMenu(cid,node);
-navigator.vibrate&&navigator.vibrate(20)},520)});
-['pointerup','pointercancel','pointermove'].forEach(ev=>node.addEventListener(ev,e=>{
-if(ev==='pointermove'&&Math.hypot(e.clientX-sx,e.clientY-sy)>12)clearTimeout(tmr);else clearTimeout(tmr)}));
-});
-document.querySelectorAll('.mem[data-id]').forEach(node=>node.addEventListener('contextmenu',e=>{e.preventDefault();memberMenu(state.chatId,node.dataset.id,node)}));
-}
-document.addEventListener('dblclick',e=>{
-const b=e.target.closest('.bub');if(b&&canPost(chatById(state.chatId))){state.replyTo=b.dataset.mid;renderComposerBanner();document.getElementById('cin')&&document.getElementById('cin').focus()}
-const t=e.target.closest('.btxt');
-if(t&&/^(\p{Extended_Pictographic}|\s|️){1,6}$/u.test(t.textContent.trim())){const mid=t.closest('.mrow').dataset.mid;const m=findMsg(mid);m.reactions=m.reactions||{};(m.reactions['❤️']=m.reactions['❤️']||[]).includes(S.me)?m.reactions['❤️']=m.reactions['❤️'].filter(x=>x!==S.me):m.reactions['❤️'].push(S.me);DB.save();renderMessages()}
-});
+function attachLongPress(){}
 /* ============ KEYBOARD ============ */
 document.addEventListener('keydown',e=>{
-if(document.querySelector('.story-view')){
-if(e.key==='Escape')svCtl&&svCtl.close();
-if(e.key==='ArrowLeft')svCtl&&svCtl.next();
-if(e.key==='ArrowRight')svCtl&&svCtl.prev();
-return}
 if(e.key==='Escape'){
 if(pickerOpen){togglePicker(false);return}
 if(curMenu)return closeMenu();
 if(openModals.length)return closeModal();
-if(state.infoOpen){state.infoOpen=false;return renderInfo()}
-if(state.selectMode){state.selectMode=false;state.selected.clear();renderMessages();return renderSelectBar()}}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();state.section='search';state.focusSearch=true;renderRail();renderList()}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'&&state.chatId){e.preventDefault();chatSearch(state.chatId)}
-if(e.key==='ArrowUp'&&!e.ctrlKey){const ta=document.getElementById('cin');if(ta&&!ta.value&&state.chatId){const c=chatById(state.chatId);
-for(let i=c.messages.length-1;i>=0;i--){if(isMine(c.messages[i])&&c.messages[i].type==='text'){state.editId=c.messages[i].id;ta.value=c.messages[i].text;renderComposerBanner();ta.focus();e.preventDefault();break}}}}
+if(state.infoOpen){state.infoOpen=false;return renderInfo()}}
 });
 window.addEventListener('resize',()=>{const mb=document.querySelector('.mob-back');if(mb)mb.style.display=window.innerWidth<=1024?'grid':'none'});
 /* ============ FILE INPUTS ============ */
 document.getElementById('fileImg').addEventListener('change',e=>{if(e.target.files[0])handleImage(e.target.files[0]);e.target.value=''});
-document.getElementById('fileVid').addEventListener('change',e=>{const f=e.target.files[0];if(f)f.size>8*1024*1024?toast('ویدیو برای ذخیره محلی بزرگ است (حداکثر ۸ مگابایت)','err'):handleFile(f);e.target.value=''});
 document.getElementById('fileAny').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);e.target.value=''});
 document.getElementById('avFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;const d=await compressImage(f,320,.82);authAv={src:d.src};renderAuthAvatars()});
-/* ============ FIREBASE SYNC ============ */
+/* ============ FIREBASE SYNC (PRIVATE) ============ */
 const Backend={
-async searchUsers(q){const n=norm(q);return Object.values(S.users).filter(u=>u.id!==S.me&&!u.demo&&!u.blocked&&(norm(u.username)===n||norm(u.username).startsWith(n)||u.name.toLowerCase().includes(q.toLowerCase())))},
-async getUserByUsername(un){
-const n=norm(un);
-const local=Object.values(S.users).find(u=>norm(u.username)===n);
-if(local&&!local.demo&&!local.blocked)return local;
-if(!RTDB||!FB_OK)return local||null;
-try{
-const sn=await R('usernames/'+n).once('value');const rec=sn.val();
-if(!rec)return null;
-const us=await R('users/'+rec.uid).once('value');const u=us.val();
-if(u){u.id=rec.uid;S.users[u.id]=Object.assign(S.users[u.id]||{},u,{id:u.id});}
-return u||null;
-}catch(e){return null}
-},
 async sendMessage(chatId,msg){
 if(!RTDB||chatId.startsWith('saved_'))return;
-if(!FB_OK){toast('اتصال به دیتابیس برقرار نیست — پیام فقط محلی است','err');return}
-if(msg.senderId && S.me && S.users[msg.senderId] && S.users[msg.senderId].blocked){
-toast('شما این کاربر را مسدود کرده‌اید','err');return;
-}
+if(!FB_OK){toast('اتصال به دیتابیس برقرار نیست','err');return}
 R('messages/'+chatId+'/'+msg.id).set(msg);
 R('chats/'+chatId).update({updatedAt:Date.now(),lastMsg:{senderId:msg.senderId,type:msg.type,text:(msg.text||'').slice(0,80),createdAt:msg.createdAt,readBy:[msg.senderId]}});
 const c=chatById(chatId);
 if(c&&c.members){for(const u in c.members){if(u!==msg.senderId)R('chats/'+chatId+'/unread/'+u).transaction(v=>(v||0)+1)}}
 },
-async markRead(chatId){},
-async setTyping(chatId){},
 async publishStory(st){
 if(!RTDB||!FB_OK)return;
 R('stories/'+st.id).set({userId:st.userId,type:st.type,src:st.src||null,text:st.text||'',bg:st.bg||SBGS[0],createdAt:st.createdAt,views:{}});
-},
-async subscribe(){}
+}
 };
 let syncOn=false,curMsgSub=null,prevLastMap={};
 function startSync(){
 if(syncOn||!RTDB||!S.me)return;syncOn=true;
-R('users').on('value',s=>{
-const rem=s.val()||{};
-for(const id in rem){const u=rem[id]||{};u.id=id;u.online=!!u.online;u.avatar=u.avatar||{col:AVCOLS[0],src:null};
-S.users[id]=Object.assign(S.users[id]||{},u,{id:u.id});}
-renderRail();if(state.section!=='settings'&&state.section!=='profile')renderList();else if(state.section==='profile')renderProfilePage();
-if(state.infoOpen)renderInfo();
-});
+// فقط چت‌هایی که عضو هستم را بخوان
 R('chats').on('value',s=>{
 const rem=s.val()||{};
+const neededUsers=new Set();
 for(const id in rem){
 if(id.startsWith('saved_'))continue;
 const c=rem[id]||{};
 if(!c.members||!c.members[S.me])continue;
-if(c.type==='private' && c.peerId){
-const peer=S.users[c.peerId];
-if(peer && peer.blocked)continue;
-}
 const cur=S.chats[id]||{id,messages:[]};
 S.chats[id]=Object.assign(cur,{id,type:c.type||'private',peerId:c.peerId||cur.peerId,title:c.title||'',username:c.username||'',about:c.about||'',
 avatar:c.avatar||cur.avatar||null,members:c.members,invite:c.invite||'',permissions:c.permissions||{},
 pinnedIds:c.pinnedIds||cur.pinnedIds||[],lastMsg:c.lastMsg||null,createdAt:c.createdAt||cur.createdAt||Date.now(),
 unread:(c.unread&&c.unread[S.me])||0});
+// کاربران مورد نیاز را جمع کن
+if(c.members){for(const uid2 in c.members){if(uid2!==S.me)neededUsers.add(uid2)}}
+if(c.peerId&&c.peerId!==S.me)neededUsers.add(c.peerId);
 const nl=S.chats[id].lastMsg;const nlTs=nl?nl.createdAt:0;
 if(!(id in prevLastMap)){prevLastMap[id]=nlTs}
 else if(nlTs!==prevLastMap[id]&&nl&&nl.senderId!==S.me&&state.chatId!==id){
-const sender=S.users[nl.senderId];
-if(!sender || !sender.blocked){
 notifyIncoming(S.chats[id],{text:nl.text,type:nl.type,senderId:nl.senderId});
-}
 }
 prevLastMap[id]=nlTs;
 }
+// فقط کاربران مرتبط را لود کن
+neededUsers.forEach(uid2=>{
+if(!S.users[uid2]){
+R('users/'+uid2).once('value').then(snap=>{
+const u=snap.val();
+if(u){u.id=uid2;u.known=true;S.users[uid2]=Object.assign(S.users[uid2]||{},u,{id:uid2,known:true});DB.save();renderRail();renderList();}
+});
+}else if(!S.users[uid2].known){
+S.users[uid2].known=true;DB.save();
+}
+});
 renderRail();renderList();if(state.infoOpen)renderInfo();
 });
+// استوری‌ها فقط برای خودم و مخاطبینم
 R('stories').on('value',s=>{
 const v=s.val()||{};const arr=[];
 for(const id in v){const st=v[id]||{};st.id=id;st.views=st.views?Object.keys(st.views):[];
-const owner=S.users[st.userId];
-if(owner && owner.blocked)continue;
+if(st.userId===S.me||(S.users[st.userId]&&S.users[st.userId].known&&!S.users[st.userId].blocked)){
 if(Date.now()-(st.createdAt||0)<864e5)arr.push(st)}
-S.stories=arr.concat(S.stories.filter(x=>x.demo&&Date.now()-x.createdAt<864e5));
+}
+S.stories=arr;
 renderList();
 });
+// بلاک‌های من
 R('users/'+S.me+'/blocked').on('value',s=>{
 const blocked=s.val()||{};
 Object.values(S.users).forEach(u=>{if(u.id!==S.me)u.blocked=false});
-for(const uid2 in blocked){
-if(S.users[uid2])S.users[uid2].blocked=true;
-}
-DB.save();renderRail();renderList();if(state.infoOpen)renderInfo();
+for(const uid2 in blocked){if(S.users[uid2])S.users[uid2].blocked=true;}
+DB.save();renderRail();renderList();
 });
+// آنلاین بودن من
 const meRef=R('users/'+S.me);
 meRef.child('online').set(true);
 meRef.child('lastSeen').set(firebase.database.ServerValue.TIMESTAMP);
 meRef.child('online').onDisconnect().set(false);
 meRef.child('lastSeen').onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
+// وضعیت آنلاین مخاطبینم
+R('users/'+S.me).once('value').then(()=>{
+Object.values(S.users).filter(u=>u.known&&u.id!==S.me).forEach(u=>{
+R('users/'+u.id+'/online').on('value',s=>{
+if(S.users[u.id]){S.users[u.id].online=!!s.val();renderRail();renderList();if(state.infoOpen)renderInfo();}
+});
+R('users/'+u.id+'/lastSeen').on('value',s=>{
+if(S.users[u.id]&&s.val()){S.users[u.id].lastSeen=s.val();renderList();}
+});
+});
+});
 }
 function subscribeMessages(cid){
 unsubscribeMessages();
@@ -2218,6 +1618,10 @@ if(m.senderId===S.me)return true;
 const sender=S.users[m.senderId];
 return !sender || !sender.blocked;
 });
+const newMsgs=[];
+for(const m of c.messages){
+if(!renderedMsgIds.has(m.id)){newMsgs.push(m);renderedMsgIds.add(m.id);}
+}
 const upd={};
 c.messages.forEach(m=>{if(m.senderId!==S.me&&!(m.readBy||[]).includes(S.me))upd[m.id+'/readBy/'+S.me]=true});
 if(Object.keys(upd).length){
@@ -2226,7 +1630,14 @@ R('chats/'+cid+'/unread/'+S.me).set(0);
 const lm=c.lastMsg;if(lm&&lm.senderId!==S.me)R('chats/'+cid+'/lastMsg/readBy').transaction(a=>{a=a||[];if(!a.includes(S.me))a.push(S.me);return a});
 }
 c.unread=0;
-if(state.chatId===cid){renderMessages();if(state.stick)stickBottom()}
+if(state.chatId===cid){
+if(newMsgs.length){
+for(const m of newMsgs)appendMessage(m,true);
+if(state.stick)stickBottom();
+}else if(renderedMsgIds.size===0){
+renderMessages();
+}
+}
 renderList();
 };
 curMsgSub={id:cid,cb};
